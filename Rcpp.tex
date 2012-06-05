@@ -1,4 +1,4 @@
-% Created 2012-06-04 Mon 16:44
+% Created 2012-06-05 Tue 00:06
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -15,6 +15,11 @@
 \usepackage{amssymb}
 \usepackage{hyperref}
 \tolerance=1000
+\addtolength{\oddsidemargin}{-.875in}
+\addtolength{\evensidemargin}{-.875in}
+\addtolength{\textwidth}{1.75in}
+\addtolength{\topmargin}{-.875in}
+\addtolength{\textheight}{1.75in}
 \providecommand{\alert}[1]{\textbf{#1}}
 
 \title{Rcpp}
@@ -32,6 +37,9 @@
 \setcounter{tocdepth}{3}
 \tableofcontents
 \vspace*{1cm}
+
+
+
 \section{A few words about C++}
 \label{sec-1}
 
@@ -41,7 +49,8 @@
   general-purpose programming language (Wikipedia).
 \item Developed by Bjarne Stroustrup at Bell Labs, starting in late 1970's
   as a sort of generalization of the C language (hence, the name).
-\item C++ today is a ``federation of four languages'' (Eddelbuettel).
+\item C++ today is a ``federation of four languages'' (Scott Meyers,
+  \href{http://www.aristeia.com/books.html}{http://www.aristeia.com/books.html}, as quoted by Dirk Eddelbuettel).
 \begin{itemize}
 \item Compiled rather than interpreted (like C, Fortran, etc.)
 \item OOP (``marries data with code'')
@@ -77,8 +86,8 @@ class given by Dirk Eddelbuetel and Romain Francois.
 \label{sec-2-2}
 
 
-Rcpp is a moving target, and much of the documentation that is ``in the
-wild'' does \textbf{not} represent the current state of the software.
+Rcpp is a moving target, and some of the older documentation that is ``in the
+wild'' may \textbf{not} represent the current state of the software.
 \subsection{Why use Rcpp?}
 \label{sec-2-3}
 
@@ -95,71 +104,72 @@ wild'' does \textbf{not} represent the current state of the software.
 
 
 \begin{verbatim}
-
-## cf http://dirk.eddelbuettel.com/blog/2010/09/07#straight_curly_or_compiled
-
-## Xian's code, using <- for assignments and passing x down
-f <- function(n, x=1) for (i in 1:n) x=1/(1+x)
-g <- function(n, x=1) for (i in 1:n) x=(1/(1+x))
-h <- function(n, x=1) for (i in 1:n) x=(1+x)^(-1)
-j <- function(n, x=1) for (i in 1:n) x={1/{1+x}}
-k <- function(n, x=1) for (i in 1:n) x=1/{1+x}
-
-## R 2.13.0 brings this toy
-library(compiler)
-lf <- cmpfun(f)
-lg <- cmpfun(g)
-lh <- cmpfun(h)
-lj <- cmpfun(j)
-lk <- cmpfun(k)
-
-## now load some tools
-library(rbenchmark)
-
-N <- 1e6
-
-## now with Rcpp and C++
-library(inline)
-
-## and define our version in C++
-src <- 'int n = as<int>(ns);
-        double x = as<double>(xs);
-        for (int i=0; i<n; i++) x=1/(1+x);
-        return wrap(x); '
-l <- cxxfunction(signature(ns="integer",
-                           xs="numeric"),
-                 body=src, plugin="Rcpp")
-
-## now run the benchmark
-print(benchmark(f(N,1), g(N,1), h(N,1), j(N,1), k(N,1),
-          l(N,1),
-          lf(N,1), lg(N,1), lh(N,1), lj(N,1), lk(N,1),
-          columns=c("test", "replications",
-          "elapsed", "relative"),
-          order="relative", replications=10))
+  
+  ## cf http://dirk.eddelbuettel.com/blog/2010/09/07#straight_curly_or_compiled
+  
+  ## Xian's code, using <- for assignments and passing x down
+  f <- function(n, x=1) for (i in 1:n) x=1/(1+x)
+  g <- function(n, x=1) for (i in 1:n) x=(1/(1+x))
+  h <- function(n, x=1) for (i in 1:n) x=(1+x)^(-1)
+  j <- function(n, x=1) for (i in 1:n) x={1/{1+x}}
+  k <- function(n, x=1) for (i in 1:n) x=1/{1+x}
+  
+  ## R 2.13.0 brings this toy
+  library(compiler)
+  lf <- cmpfun(f)
+  lg <- cmpfun(g)
+  lh <- cmpfun(h)
+  lj <- cmpfun(j)
+  lk <- cmpfun(k)
+  
+  ## now load some tools
+  library(rbenchmark)
+  
+  N <- 1e6
+  
+  ## now with Rcpp and C++
+  library(inline)
+  
+  ## and define our version in C++
+  src <- 'int n = as<int>(ns);
+          double x = as<double>(xs);
+          for (int i=0; i<n; i++) x=1/(1+x);
+          return wrap(x); '
+  l <- cxxfunction(signature(ns="integer",
+                             xs="numeric"),
+                   body=src, plugin="Rcpp")
+  
+  ## now run the benchmark
+  print(benchmark(f(N,1), g(N,1), h(N,1), j(N,1), k(N,1),
+            l(N,1),
+            lf(N,1), lg(N,1), lh(N,1), lj(N,1), lk(N,1),
+            columns=c("test", "replications",
+            "elapsed", "relative"),
+            order="relative", replications=10))
 \end{verbatim}
 
 
 \begin{verbatim}
        test replications elapsed  relative
 6   l(N, 1)           10   0.118   1.00000
-11 lk(N, 1)           10   3.173  26.88983
-10 lj(N, 1)           10   3.196  27.08475
-7  lf(N, 1)           10   3.218  27.27119
-8  lg(N, 1)           10   3.335  28.26271
-9  lh(N, 1)           10   4.326  36.66102
-1   f(N, 1)           10  14.633 124.00847
-5   k(N, 1)           10  14.693 124.51695
-4   j(N, 1)           10  16.256 137.76271
-2   g(N, 1)           10  16.706 141.57627
-3   h(N, 1)           10  21.476 182.00000
+8  lg(N, 1)           10   3.127  26.50000
+11 lk(N, 1)           10   3.128  26.50847
+10 lj(N, 1)           10   3.203  27.14407
+7  lf(N, 1)           10   3.220  27.28814
+9  lh(N, 1)           10   4.266  36.15254
+5   k(N, 1)           10  14.119 119.65254
+1   f(N, 1)           10  14.399 122.02542
+4   j(N, 1)           10  16.095 136.39831
+2   g(N, 1)           10  16.725 141.73729
+3   h(N, 1)           10  20.880 176.94915
 \end{verbatim}
 \subsection{RInside: the other way around}
 \label{sec-3-2}
 
 
-Rcpp includes a related R package, \emph{RInside}, which makes it possible
-to embed R in C++ applications.
+There is a package called \emph{RInside} that uses Rcpp to embed R in C++
+applications.  The RInside package makes it easier to have `R inside'
+your C++ application by providing a few wrapper classes.
 \subsubsection{RInside: the ``hello world'' example}
 \label{sec-3-2-1}
 
@@ -169,7 +179,7 @@ comes with a helpful Makefile.  On my system it is located in:
 
 
 \begin{verbatim}
-/usr/lib64/R/library/RInside/examples/standard/Makefile
+  /usr/lib64/R/library/RInside/examples/standard/Makefile
 \end{verbatim}
 
 We want to ``tangle'' the following source-code block, but we need to
@@ -246,26 +256,33 @@ Here's the C++ code for the ``hello world'' program:
 
 
 \begin{verbatim}
-
-#include <RInside.h>              // embedded R via RInside
-
-int main(int argc, char *argv[]) {
-
-    RInside R(argc, argv);        // create embedded R inst.
-
-    R["txt"] = "Hello, world!\n"; // assign  to 'txt' in R
-
-    R.parseEvalQ("cat(txt)");     // eval string, ignore result
-
-    exit(0);
-}
+  
+  #include <RInside.h>              // embedded R via RInside
+  
+  int main(int argc, char *argv[]) {
+  
+      RInside R(argc, argv);        // create embedded R inst.
+  
+      R["txt"] = "Hello, world!\n"; // assign  to 'txt' in R
+  
+      R.parseEvalQ("cat(txt)");     // eval string, ignore result
+  
+      exit(0);
+  }
 \end{verbatim}
+
 
 
 \begin{verbatim}
 
-make -f Makefile.demo
+make -f Makefile.tangled
 ./RI-hw
+\end{verbatim}
+
+\begin{verbatim}
+ Starting R at:
+ [1] "2012-06-05 00:08:45 PDT"
+ Hello, world!
 \end{verbatim}
 \subsubsection{RInside: use of R graphics in C++}
 \label{sec-3-2-2}
@@ -274,11 +291,52 @@ make -f Makefile.demo
 
 
 
+\begin{verbatim}
+
+cat RI-graphics.cpp
+make -f Makefile.tangled
+./RI-graphics
+\end{verbatim}
+
 
 \begin{verbatim}
- Starting R at:
- [1] "2012-06-04 16:46:09 PDT"
- Could now use plot in RIgraphics.png
+
+// Simple example motivated by post from Paul Smith <phhs80@gmail.com>
+// to r-help on 06 Mar 2011
+//
+// Copyright (C) 2011  Dirk Eddelbuettel and Romain Francois
+
+#include <RInside.h>                    // for the embedded R via RInside
+
+int main(int argc, char *argv[]) {
+
+  // create an embedded R instance
+  RInside R(argc, argv);               
+
+  // evaluate an R expression with curve() 
+  // because RInside defaults to interactive=false we use a file
+  // std::string cmd = "tmpf <- tempfile('curve'); " 
+  std::string cmd = "tmpf <- 'RIgraphics.png'; "
+    "png(tmpf); "
+    "curve(x^2, -10, 10, 200); "
+    "dev.off();"
+    "tmpf";
+  // by running parseEval, we get the last assignment back, here the filename
+  std::string tmpfile = R.parseEval(cmd);
+
+  std::cout << "Could now use plot in " << tmpfile << std::endl;
+  // unlink(tmpfile.c_str());		// cleaning up
+
+  // alternatively, by forcing a display we can plot to screen
+  cmd = "x11(); curve(x^2, -10, 10, 200); Sys.sleep(10);";
+  // parseEvalQ evluates without assignment
+  R.parseEvalQ(cmd);
+    
+  exit(0);
+}
+Starting R at:
+[1] "2012-06-05 00:08:49 PDT"
+Could now use plot in RIgraphics.png
 \end{verbatim}
 
 
@@ -289,44 +347,44 @@ make -f Makefile.demo
 
 
 \begin{verbatim}
+  
+  library(inline)
+  
+  src <- '
+      Rcpp::IntegerVector vec(vx);
+      int prod = 1;
+      for (int i=0; i<vec.size(); i++) {
+          prod *= vec[i];
+      }
+      return Rcpp::wrap(prod);
+  '
+  funLoop <- cxxfunction(signature(vx="integer"),
+                     src, plugin="Rcpp")
+  funLoop(1L:10L)
+  
+    
+  ## Can also use a sort of "vectorized" approach
 
-library(inline)
-
-src <- '
+  src <- '
     Rcpp::IntegerVector vec(vx);
-    int prod = 1;
-    for (int i=0; i<vec.size(); i++) {
-        prod *= vec[i];
-    }
+    int prod = std::accumulate(vec.begin(), vec.end(),
+                               1, std::multiplies<int>());
     return Rcpp::wrap(prod);
-'
-funLoop <- cxxfunction(signature(vx="integer"),
-                   src, plugin="Rcpp")
-funLoop(1L:10L)
+  '
+  funVec <- cxxfunction(signature(vx="integer"),
+                     src, plugin="Rcpp")
+  funVec(1L:10L)
+  
 
+  ## But there's not much (or any) performance advantage
+  ###### This needs work ###################################
 
-## Can also use a sort of "vectorized" approach
-
-src <- '
-  Rcpp::IntegerVector vec(vx);
-  int prod = std::accumulate(vec.begin(), vec.end(),
-                             1, std::multiplies<int>());
-  return Rcpp::wrap(prod);
-'
-funVec <- cxxfunction(signature(vx="integer"),
-                   src, plugin="Rcpp")
-funVec(1L:10L)
-
-
-## But there's not much (or any) performance advantage
-###### This needs work ###################################
-
-library(rbenchmark)
-
-print(benchmark(funLoop(1L:1000L), funVec(1L:1000L),
-          columns=c("test",    "replications",
-                    "elapsed", "relative"),
-          order=c("replications", "elapsed"), replications=10^(1:5)))
+  library(rbenchmark)
+  
+  print(benchmark(funLoop(1L:1000L), funVec(1L:1000L),
+            columns=c("test",    "replications",
+                      "elapsed", "relative"),
+            order=c("replications", "elapsed"), replications=10^(1:5)))
 \end{verbatim}
 
 
@@ -336,14 +394,14 @@ print(benchmark(funLoop(1L:1000L), funVec(1L:1000L),
               test replications elapsed relative
 1  funLoop(1:1000)           10   0.000        0
 6   funVec(1:1000)           10   0.000        0
-2  funLoop(1:1000)          100   0.001        1
 7   funVec(1:1000)          100   0.001        1
-8   funVec(1:1000)         1000   0.010       10
-3  funLoop(1:1000)         1000   0.014       14
-9   funVec(1:1000)        10000   0.109      109
-4  funLoop(1:1000)        10000   0.153      153
-10  funVec(1:1000)       100000   1.104     1104
-5  funLoop(1:1000)       100000   1.598     1598
+2  funLoop(1:1000)          100   0.002        2
+8   funVec(1:1000)         1000   0.011       11
+3  funLoop(1:1000)         1000   0.015       15
+9   funVec(1:1000)        10000   0.108      108
+4  funLoop(1:1000)        10000   0.154      154
+10  funVec(1:1000)       100000   1.105     1105
+5  funLoop(1:1000)       100000   1.527     1527
 \end{verbatim}
 \section{A peek under the hood}
 \label{sec-4}
@@ -366,7 +424,7 @@ memory management.
 \end{quote}
 \section{Some words about constructors}
 \label{sec-5}
-\subsection{Nasty example: ``remember to clone''}
+\subsection{Nasty example: cast \~{} clone}
 \label{sec-5-1}
 
 
@@ -502,18 +560,18 @@ The RcppArmadillo package makes it easy to use Armadillo in Rcpp.
 
 \begin{verbatim}
 
-library(inline)
-
-src <- '
-  arma::mat m1 = Rcpp::as<arma::mat>(mx);
-  arma::mat m2 = m1 + m1;
-  arma::mat m3 = m1 * 3;
-  return Rcpp::List::create(m1, m2, m3); '
-fun <- cxxfunction(signature(mx="numeric"), src,
-                   plugin="RcppArmadillo")
-mat <- matrix(1:9, 3, 3)
-mat2 <- fun(mat)
-print(mat2)
+  library(inline)
+  
+  src <- '
+    arma::mat m1 = Rcpp::as<arma::mat>(mx);
+    arma::mat m2 = m1 + m1;
+    arma::mat m3 = m1 * 3;
+    return Rcpp::List::create(m1, m2, m3); '
+  fun <- cxxfunction(signature(mx="numeric"), src,
+                     plugin="RcppArmadillo")
+  mat <- matrix(1:9, 3, 3)
+  mat2 <- fun(mat)
+  print(mat2)
 \end{verbatim}
 
 
@@ -561,25 +619,25 @@ Title:              Rcpp integration for the Eigen templated linear
 
 \begin{verbatim}
 
-library(inline)
+  library(inline)
+  
+  src <- '
+    arma::mat m1 = Rcpp::as<arma::mat>(mx);
+    arma::vec eigval;
+    arma::mat eigvec;
 
-src <- '
-  arma::mat m1 = Rcpp::as<arma::mat>(mx);
-  arma::vec eigval;
-  arma::mat eigvec;
+    eig_sym(eigval, eigvec, m1);
 
-  eig_sym(eigval, eigvec, m1);
-
-  return Rcpp::List::create(m1, eigval, eigvec); '
-fun <- cxxfunction(signature(mx="numeric"), src,
-                   plugin="RcppArmadillo")
+    return Rcpp::List::create(m1, eigval, eigvec); '
+  fun <- cxxfunction(signature(mx="numeric"), src,
+                     plugin="RcppArmadillo")
 
 
-mat <- matrix (rbind(c(3, 2, 4),
-                     c(2, 0, 2),
-                     c(4, 2, 3)), nrow=3, ncol=3)
+  mat <- matrix (rbind(c(3, 2, 4),
+                       c(2, 0, 2),
+                       c(4, 2, 3)), nrow=3, ncol=3)
 
-print(fun(mat))
+  print(fun(mat))
 \end{verbatim}
 
 
@@ -626,32 +684,32 @@ created in C++, and then return the output of the function to R.  We
 would have gotten the same result had we defined the vectors in R and
 invoked the same function directly in R.
 
-But in a real use case, we would have proceede to do further
-calculations inside the C+ code.
+But in a real use case, we would have proceeded to do further
+calculations inside the C++ code.
 
 
 \begin{verbatim}
+   
+  library(inline)
+  src <- '
+    Rcpp::Function expGrid("expand.grid");
+    IntegerVector v1;
+    IntegerVector v2;
 
-library(inline)
-src <- '
-  Rcpp::Function expGrid("expand.grid");
-  IntegerVector v1;
-  IntegerVector v2;
+    v1.push_back(1);
+    v1.push_back(3);
+    v1.push_back(5);
 
-  v1.push_back(1);
-  v1.push_back(3);
-  v1.push_back(5);
+    v2.push_back(2);
+    v2.push_back(4);
+    v2.push_back(6);
 
-  v2.push_back(2);
-  v2.push_back(4);
-  v2.push_back(6);
-
-  return(expGrid(v1, v2));'
-
-  fun <- cxxfunction(signature(),
-                     src,
-                     plugin="Rcpp")
-  print(fun())
+    return(expGrid(v1, v2));'
+  
+    fun <- cxxfunction(signature(),
+                       src,
+                       plugin="Rcpp")
+    print(fun())
 \end{verbatim}
 
 
@@ -676,24 +734,24 @@ named ``sort'', but that name is, in effect, a dummy variable.
 
 
 \begin{verbatim}
+  
+  library(inline)
 
-library(inline)
-
-src <- '
-  Function sort(x) ;
-  return sort( y, Named("decreasing", true));'
-fun <- cxxfunction(signature(x="function",
-                             y="ANY"),
-                    src, plugin="Rcpp", verbose=FALSE)
-fun(sort, sample(1:5, 10, TRUE))
-fun(sort, sample(LETTERS[1:5], 10, TRUE))
-fun(mean, sample(1:100, 10, TRUE))
+  src <- '
+    Function sort(x) ;
+    return sort( y, Named("decreasing", true));'
+  fun <- cxxfunction(signature(x="function",
+                               y="ANY"),
+                      src, plugin="Rcpp", verbose=FALSE)
+  fun(sort, sample(1:5, 10, TRUE))
+  fun(sort, sample(LETTERS[1:5], 10, TRUE))
+  fun(mean, sample(1:100, 10, TRUE))
 \end{verbatim}
 
 \begin{verbatim}
-  [1] 5 5 5 5 3 3 3 2 2 1
-  [1] "E" "D" "D" "D" "C" "C" "B" "B" "A" "A"
- [1] 58.6
+  [1] 5 5 4 4 4 4 2 2 2 1
+  [1] "E" "D" "D" "D" "D" "C" "C" "B" "B" "A"
+ [1] 43.2
 \end{verbatim}
 \subsection{Environment}
 \label{sec-7-4}
@@ -704,23 +762,23 @@ an alternative way of accessing functions from R.
 
 
 \begin{verbatim}
-
-library(inline)
-
-src <- '
-    Rcpp::Environment stats("package:stats");
-    Rcpp::Function rnorm = stats["rnorm"];
-    return rnorm(10, Rcpp::Named("sd", 100.0));
-'
-
-fun <- cxxfunction(signature(),
-                   src, plugin="Rcpp")
-fun()
+  
+  library(inline)
+  
+  src <- '
+      Rcpp::Environment stats("package:stats");
+      Rcpp::Function rnorm = stats["rnorm"];
+      return rnorm(10, Rcpp::Named("sd", 100.0));
+  '
+  
+  fun <- cxxfunction(signature(),
+                     src, plugin="Rcpp")
+  fun()
 \end{verbatim}
 
 \begin{verbatim}
-  [1]  106.093676    1.059361   51.519316   31.036035  -75.344858  -36.977641   71.808983
-  [8]  -50.170794 -162.731572  -67.195076
+  [1] -52.98656 -49.64875 -80.00781  16.90669 -77.28534 117.35316 -13.37232 -81.54786  10.28744
+ [10] -57.58372
 \end{verbatim}
 \subsection{S4 classes}
 \label{sec-7-5}
@@ -743,11 +801,11 @@ Eddelbuettel/Francois have wrapped and extended this function to
 
 
 \begin{verbatim}
-
-library(Rcpp)
-if (!file.exists("./UCDpackage")) {
-    Rcpp.package.skeleton( "UCDpackage" )
-}
+  
+  library(Rcpp)
+  if (!file.exists("./UCDpackage")) {
+      Rcpp.package.skeleton( "UCDpackage" )
+  }
 \end{verbatim}
 
 
@@ -778,8 +836,8 @@ Adding Rcpp settings
 
 
 \begin{verbatim}
-
-tree UCDpackage
+  
+  tree UCDpackage
 \end{verbatim}
 
 
@@ -809,8 +867,8 @@ UCDpackage
 
 
 \begin{verbatim}
-
-cat ./UCDpackage/src/rcpp_hello_world.h
+  
+  cat ./UCDpackage/src/rcpp_hello_world.h
 \end{verbatim}
 
 
@@ -841,8 +899,8 @@ RcppExport SEXP rcpp_hello_world() ;
 
 
 \begin{verbatim}
-
-cat ./UCDpackage/src/rcpp_hello_world.cpp
+  
+  cat ./UCDpackage/src/rcpp_hello_world.cpp
 \end{verbatim}
 
 
@@ -865,8 +923,8 @@ SEXP rcpp_hello_world(){
 
 
 \begin{verbatim}
-
-cat ./UCDpackage/R/rcpp_hello_world.R
+  
+  cat ./UCDpackage/R/rcpp_hello_world.R
 \end{verbatim}
 
 \begin{verbatim}
@@ -885,8 +943,8 @@ on Rcpp.
 
 
 \begin{verbatim}
-
-cat ./UCDpackage/DESCRIPTION
+  
+  cat ./UCDpackage/DESCRIPTION
 \end{verbatim}
 
 
@@ -911,8 +969,8 @@ The regular expression exports all symbols.
 
 
 \begin{verbatim}
-
-cat ./UCDpackage/NAMESPACE
+  
+  cat ./UCDpackage/NAMESPACE
 \end{verbatim}
 
 \begin{verbatim}
@@ -925,8 +983,8 @@ cat ./UCDpackage/NAMESPACE
 
 
 \begin{verbatim}
-
-cat ./UCDpackage/src/Makevars
+  
+  cat ./UCDpackage/src/Makevars
 \end{verbatim}
 
 
@@ -963,8 +1021,8 @@ PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"`
 
 
 \begin{verbatim}
-
-cat ./UCDpackage/src/Makevars.win
+  
+  cat ./UCDpackage/src/Makevars.win
 \end{verbatim}
 
 \begin{verbatim}
@@ -980,10 +1038,10 @@ Something in my .Rprofile was causing a problem.
 
 
 \begin{verbatim}
-
-mv ~/.Rprofile ~/.Rprofile.save
-R CMD INSTALL -l ~/R/library UCDpackage
-mv ~/.Rprofile.save ~/.Rprofile
+  
+  mv ~/.Rprofile ~/.Rprofile.save
+  R CMD INSTALL -l ~/R/library UCDpackage
+  mv ~/.Rprofile.save ~/.Rprofile
 \end{verbatim}
 
 \begin{verbatim}
@@ -999,9 +1057,9 @@ mv ~/.Rprofile.save ~/.Rprofile
 
 
 \begin{verbatim}
-
-library("UCDpackage", lib.loc="~/R/library")
-rcpp_hello_world()
+  
+  library("UCDpackage", lib.loc="~/R/library")
+  rcpp_hello_world()
 \end{verbatim}
 
 \begin{verbatim}
@@ -1045,22 +1103,22 @@ aka, SEXP -- i.e. something that R can understand.)
 
 
 \begin{verbatim}
-
-library(inline)
-includes <- '
-        double square( double x){
-          return x*x ;
-        }'
-
-src <- 'NumericVector x(xx);
-        return wrap(sapply( x, square ));'
-
-fun <- cxxfunction(signature(xx="numeric"),
-                   body=src,
-                   plugin="Rcpp",
-                   includes=includes)
-
-fun(c(1, 3, 5, 7, 9))
+  
+  library(inline)
+  includes <- '
+          double square( double x){
+            return x*x ;
+          }'
+  
+  src <- 'NumericVector x(xx);
+          return wrap(sapply( x, square ));'
+  
+  fun <- cxxfunction(signature(xx="numeric"),
+                     body=src,
+                     plugin="Rcpp",
+                     includes=includes)
+  
+  fun(c(1, 3, 5, 7, 9))
 \end{verbatim}
 
 \begin{verbatim}
@@ -1075,45 +1133,45 @@ significant performance advantage to using Rcpp/C++.
 
 
 \begin{verbatim}
-
-foo <- function(x) {
-
-    ## sum of
-    ##  -- squares of negatives
-    ##  -- exponentials of positives
-    s <- sum(ifelse( x < 0,  x*x,  exp(x) ))
-
-    return(s)
-}
-
-
-library(inline)
-
-cppfoo <- cxxfunction(signature(xs="numeric"),
-                   plugin="Rcpp", body='
-
-   NumericVector x(xs);
-
-   double s = sum( ifelse( x < 0, x*x, exp(x) ));
-
-   return wrap(s);
-')
-
-library(compiler)
-Rcmpfoo <- cmpfun(foo)
-
-library(rbenchmark)
-x <- rnorm(1e5)
-benchmark(foo(x), Rcmpfoo(x), cppfoo(x),
-          columns=c("test", "elapsed", "relative", "user.self", "sys.self"),
-          order="relative", replications=10)
+  
+  foo <- function(x) {
+  
+      ## sum of
+      ##  -- squares of negatives
+      ##  -- exponentials of positives
+      s <- sum(ifelse( x < 0,  x*x,  exp(x) ))
+  
+      return(s)
+  }
+  
+  
+  library(inline)
+  
+  cppfoo <- cxxfunction(signature(xs="numeric"),
+                     plugin="Rcpp", body='
+  
+     NumericVector x(xs);
+  
+     double s = sum( ifelse( x < 0, x*x, exp(x) ));
+  
+     return wrap(s);
+  ')
+  
+  library(compiler)
+  Rcmpfoo <- cmpfun(foo)
+  
+  library(rbenchmark)
+  x <- rnorm(1e5)
+  benchmark(foo(x), Rcmpfoo(x), cppfoo(x),
+            columns=c("test", "elapsed", "relative", "user.self", "sys.self"),
+            order="relative", replications=10)
 \end{verbatim}
 
 \begin{verbatim}
          test elapsed relative user.self sys.self
  3  cppfoo(x)   0.035  1.00000     0.035    0.000
- 2 Rcmpfoo(x)   0.654 18.68571     0.653    0.000
- 1     foo(x)   0.890 25.42857     0.889    0.001
+ 1     foo(x)   0.876 25.02857     0.872    0.004
+ 2 Rcmpfoo(x)   0.905 25.85714     0.905    0.000
 \end{verbatim}
 
 \end{document}

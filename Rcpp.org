@@ -1,3 +1,11 @@
+#+LATEX_HEADER: \addtolength{\oddsidemargin}{-.875in}
+#+LATEX_HEADER: \addtolength{\evensidemargin}{-.875in}
+#+LATEX_HEADER: \addtolength{\textwidth}{1.75in}
+
+#+LATEX_HEADER: \addtolength{\topmargin}{-.875in}
+#+LATEX_HEADER: \addtolength{\textheight}{1.75in}
+
+
 * A few words about C++
 
 - C++ is a statically typed, free-form, multi-paradigm, compiled,
@@ -6,7 +14,9 @@
 - Developed by Bjarne Stroustrup at Bell Labs, starting in late 1970's
   as a sort of generalization of the C language (hence, the name).
 
-- C++ today is a "federation of four languages" (Eddelbuettel).
+- C++ today is a "federation of four languages" (Scott Meyers,
+  http://www.aristeia.com/books.html, as quoted by Dirk Eddelbuettel).
+
   + Compiled rather than interpreted (like C, Fortran, etc.)
   + OOP ("marries data with code")
   + Generic programming (Standard Template Library)
@@ -40,8 +50,8 @@ class given by Dirk Eddelbuetel and Romain Francois.
 
 ** Caveat
 
-Rcpp is a moving target, and much of the documentation that is "in the
-wild" does *not* represent the current state of the software.
+Rcpp is a moving target, and some of the older documentation that is "in the
+wild" may *not* represent the current state of the software.
 
 ** Why use Rcpp?
 
@@ -100,28 +110,29 @@ wild" does *not* represent the current state of the software.
   
 #+END_SRC
 
-#+RESULTS[326d93f760816896d529948e7b44408553287e29]:
+#+RESULTS[b2f99864c646a5662cec09164d9ad8b884e1acb2]:
 #+begin_example
        test replications elapsed  relative
-6   l(N, 1)           10   0.117   1.00000
-10 lj(N, 1)           10   3.310  28.29060
-11 lk(N, 1)           10   3.376  28.85470
-8  lg(N, 1)           10   3.489  29.82051
-7  lf(N, 1)           10   3.665  31.32479
-9  lh(N, 1)           10   4.490  38.37607
-5   k(N, 1)           10  14.472 123.69231
-1   f(N, 1)           10  15.160 129.57265
-4   j(N, 1)           10  16.423 140.36752
-2   g(N, 1)           10  17.810 152.22222
-3   h(N, 1)           10  22.387 191.34188
+6   l(N, 1)           10   0.115   1.00000
+11 lk(N, 1)           10   3.439  29.90435
+7  lf(N, 1)           10   3.526  30.66087
+8  lg(N, 1)           10   3.603  31.33043
+10 lj(N, 1)           10   3.664  31.86087
+9  lh(N, 1)           10   4.475  38.91304
+5   k(N, 1)           10  14.795 128.65217
+1   f(N, 1)           10  14.838 129.02609
+4   j(N, 1)           10  16.233 141.15652
+2   g(N, 1)           10  16.865 146.65217
+3   h(N, 1)           10  21.614 187.94783
 #+end_example
 
 
 
 ** RInside: the other way around
 
-Rcpp includes a related R package, /RInside/, which makes it possible
-to embed R in C++ applications.
+There is a package called /RInside/ that uses Rcpp to embed R in C++
+applications.  The RInside package makes it easier to have 'R inside'
+your C++ application by providing a few wrapper classes.
 
 *** RInside: the "hello world" example
 
@@ -146,7 +157,7 @@ preserve the leading tab characters in order to keep "make" happy:
 
 Here's the Makefile:
 
-#+BEGIN_SRC sh :tangle Makefile.demo
+#+BEGIN_SRC sh :tangle Makefile.tangled
 
 ## -*- mode: make; tab-width: 8; -*-
 ##
@@ -225,21 +236,36 @@ Here's the C++ code for the "hello world" program:
   
 #+END_SRC
 
-#+BEGIN_SRC sh :results output
 
-make -f Makefile.demo
+#+BEGIN_SRC sh :results output :exports both
+
+make -f Makefile.tangled
 ./RI-hw
 
 #+END_SRC
 
 #+RESULTS:
-: Starting R at:
-: [1] "2012-05-23 19:18:14 PDT"
-: 
-: 
-: All ready to go...
-: 
-: Hello, world!
+#+begin_example
+
+  
+  #include <RInside.h>              // embedded R via RInside
+  
+  int main(int argc, char *argv[]) {
+  
+      RInside R(argc, argv);        // create embedded R inst.
+  
+      R["txt"] = "Hello, world!\n"; // assign  to 'txt' in R
+  
+      R.parseEvalQ("cat(txt)");     // eval string, ignore result
+  
+      exit(0);
+  }
+  
+Starting R at:
+[1] "2012-06-04 21:44:57 PDT"
+Hello, world!
+#+end_example
+
 
 
 
@@ -289,17 +315,54 @@ int main(int argc, char *argv[]) {
 
 #+RESULTS:
 
-#+BEGIN_SRC sh :results output graphics :exports results
+#+BEGIN_SRC sh :results output graphics :exports both
 
-make -f Makefile.demo
+cat RI-graphics.cpp
+make -f Makefile.tangled
 ./RI-graphics
 
 #+END_SRC
 
 #+RESULTS:
-: Starting R at:
-: [1] "2012-05-30 18:45:06 PDT"
-: Could now use plot in RIgraphics.png
+#+begin_example
+
+// Simple example motivated by post from Paul Smith <phhs80@gmail.com>
+// to r-help on 06 Mar 2011
+//
+// Copyright (C) 2011  Dirk Eddelbuettel and Romain Francois
+
+#include <RInside.h>                    // for the embedded R via RInside
+
+int main(int argc, char *argv[]) {
+
+  // create an embedded R instance
+  RInside R(argc, argv);               
+
+  // evaluate an R expression with curve() 
+  // because RInside defaults to interactive=false we use a file
+  // std::string cmd = "tmpf <- tempfile('curve'); " 
+  std::string cmd = "tmpf <- 'RIgraphics.png'; "
+    "png(tmpf); "
+    "curve(x^2, -10, 10, 200); "
+    "dev.off();"
+    "tmpf";
+  // by running parseEval, we get the last assignment back, here the filename
+  std::string tmpfile = R.parseEval(cmd);
+
+  std::cout << "Could now use plot in " << tmpfile << std::endl;
+  // unlink(tmpfile.c_str());		// cleaning up
+
+  // alternatively, by forcing a display we can plot to screen
+  cmd = "x11(); curve(x^2, -10, 10, 200); Sys.sleep(10);";
+  // parseEvalQ evluates without assignment
+  R.parseEvalQ(cmd);
+    
+  exit(0);
+}
+Starting R at:
+[1] "2012-06-04 21:46:14 PDT"
+Could now use plot in RIgraphics.png
+#+end_example
 
 
 [[./RIgraphics.png]]
@@ -357,15 +420,15 @@ make -f Makefile.demo
 [1] 3628800
               test replications elapsed relative
 1  funLoop(1:1000)           10   0.000        0
-6   funVec(1:1000)           10   0.001        1
-2  funLoop(1:1000)          100   0.001        1
+6   funVec(1:1000)           10   0.000        0
 7   funVec(1:1000)          100   0.001        1
-8   funVec(1:1000)         1000   0.009        9
-3  funLoop(1:1000)         1000   0.015       15
-9   funVec(1:1000)        10000   0.111      111
-4  funLoop(1:1000)        10000   0.156      156
-10  funVec(1:1000)       100000   1.207     1207
-5  funLoop(1:1000)       100000   1.647     1647
+2  funLoop(1:1000)          100   0.002        2
+8   funVec(1:1000)         1000   0.010       10
+3  funLoop(1:1000)         1000   0.018       18
+9   funVec(1:1000)        10000   0.110      110
+4  funLoop(1:1000)        10000   0.200      200
+10  funVec(1:1000)       100000   1.204     1204
+5  funLoop(1:1000)       100000   2.020     2020
 #+end_example
 
 
@@ -395,7 +458,7 @@ memory management.
 
 * Some words about constructors
 
-** Nasty example: "remember to clone"
+** Nasty example: cast ~ clone
 
 What is the difference between the two invocations of "fun" below?
 
@@ -1139,5 +1202,11 @@ significant performance advantage to using Rcpp/C++.
   
   
 #+END_SRC
+
+#+RESULTS:
+:         test elapsed relative user.self sys.self
+: 3  cppfoo(x)   0.035  1.00000     0.034    0.001
+: 2 Rcmpfoo(x)   0.701 20.02857     0.701    0.000
+: 1     foo(x)   0.703 20.08571     0.702    0.000
 
 

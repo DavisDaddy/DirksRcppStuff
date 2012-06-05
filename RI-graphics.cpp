@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
   // unlink(tmpfile.c_str());		// cleaning up
 
   // alternatively, by forcing a display we can plot to screen
-  cmd = "x11(); curve(x^2, -10, 10, 200); Sys.sleep(5);";
+  cmd = "x11(); curve(x^2, -10, 10, 200); Sys.sleep(10);";
   // parseEvalQ evluates without assignment
   R.parseEvalQ(cmd);
     

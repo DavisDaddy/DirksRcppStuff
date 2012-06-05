@@ -7,7 +7,7 @@
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="title" content="Rcpp"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2012-06-04T16:33-0700"/>
+<meta name="generated" content="2012-06-04T21:56-0700"/>
 <meta name="author" content="Michael Hannon"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -94,6 +94,8 @@
 <h1 class="title">Rcpp</h1>
 
 
+
+
 <div id="table-of-contents">
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
@@ -121,7 +123,7 @@
 <li><a href="#sec-4">4 A peek under the hood</a></li>
 <li><a href="#sec-5">5 Some words about constructors</a>
 <ul>
-<li><a href="#sec-5-1">5.1 Nasty example: "remember to clone"</a></li>
+<li><a href="#sec-5-1">5.1 Nasty example: cast ~ clone</a></li>
 <li><a href="#sec-5-2">5.2 Constructor overview</a></li>
 </ul>
 </li>
@@ -185,7 +187,9 @@
   as a sort of generalization of the C language (hence, the name).
 
 </li>
-<li>C++ today is a "federation of four languages" (Eddelbuettel).
+<li>C++ today is a "federation of four languages" (Scott Meyers,
+  <a href="http://www.aristeia.com/books.html">http://www.aristeia.com/books.html</a>, as quoted by Dirk Eddelbuettel).
+
 <ul>
 <li>Compiled rather than interpreted (like C, Fortran, etc.)
 </li>
@@ -259,8 +263,8 @@ class given by Dirk Eddelbuetel and Romain Francois.
 
 
 <p>
-Rcpp is a moving target, and much of the documentation that is "in the
-wild" does <b>not</b> represent the current state of the software.
+Rcpp is a moving target, and some of the older documentation that is "in the
+wild" may <b>not</b> represent the current state of the software.
 </p>
 </div>
 
@@ -301,65 +305,66 @@ wild" does <b>not</b> represent the current state of the software.
 
 
 
-<pre class="src src-R"><span style="color: #ffa500;">## </span><span style="color: #ffa500;">cf http://dirk.eddelbuettel.com/blog/2010/09/07#straight_curly_or_compiled</span>
-
-<span style="color: #ffa500;">## </span><span style="color: #ffa500;">Xian's code, using &lt;- for assignments and passing x down</span>
-<span style="color: #87cefa;">f</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=1/(1+x)
-<span style="color: #87cefa;">g</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=(1/(1+x))
-<span style="color: #87cefa;">h</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=(1+x)^(-1)
-<span style="color: #87cefa;">j</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x={1/{1+x}}
-<span style="color: #87cefa;">k</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=1/{1+x}
-
-<span style="color: #ffa500;">## </span><span style="color: #ffa500;">R 2.13.0 brings this toy</span>
-<span style="color: #7fffd4;">library</span>(compiler)
-lf <span style="color: #7fffd4;">&lt;-</span> cmpfun(f)
-lg <span style="color: #7fffd4;">&lt;-</span> cmpfun(g)
-lh <span style="color: #7fffd4;">&lt;-</span> cmpfun(h)
-lj <span style="color: #7fffd4;">&lt;-</span> cmpfun(j)
-lk <span style="color: #7fffd4;">&lt;-</span> cmpfun(k)
-
-<span style="color: #ffa500;">## </span><span style="color: #ffa500;">now load some tools</span>
-<span style="color: #7fffd4;">library</span>(rbenchmark)
-
-N <span style="color: #7fffd4;">&lt;-</span> 1e6
-
-<span style="color: #ffa500;">## </span><span style="color: #ffa500;">now with Rcpp and C++</span>
-<span style="color: #7fffd4;">library</span>(inline)
-
-<span style="color: #ffa500;">## </span><span style="color: #ffa500;">and define our version in C++</span>
-src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'int n = as&lt;int&gt;(ns);</span>
-<span style="color: #ffa07a;">        double x = as&lt;double&gt;(xs);</span>
-<span style="color: #ffa07a;">        for (int i=0; i&lt;n; i++) x=1/(1+x);</span>
-<span style="color: #ffa07a;">        return wrap(x); '</span>
-l <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(ns=<span style="color: #ffa07a;">"integer"</span>,
-                           xs=<span style="color: #ffa07a;">"numeric"</span>),
-                 body=src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
-
-<span style="color: #ffa500;">## </span><span style="color: #ffa500;">now run the benchmark</span>
-print(benchmark(f(N,1), g(N,1), h(N,1), j(N,1), k(N,1),
-          l(N,1),
-          lf(N,1), lg(N,1), lh(N,1), lj(N,1), lk(N,1),
-          columns=c(<span style="color: #ffa07a;">"test"</span>, <span style="color: #ffa07a;">"replications"</span>,
-          <span style="color: #ffa07a;">"elapsed"</span>, <span style="color: #ffa07a;">"relative"</span>),
-          order=<span style="color: #ffa07a;">"relative"</span>, replications=10))
-
-
+<pre class="src src-R">  
+  <span style="color: #ffa500;">## </span><span style="color: #ffa500;">cf http://dirk.eddelbuettel.com/blog/2010/09/07#straight_curly_or_compiled</span>
+  
+  <span style="color: #ffa500;">## </span><span style="color: #ffa500;">Xian's code, using &lt;- for assignments and passing x down</span>
+  <span style="color: #87cefa;">f</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=1/(1+x)
+  <span style="color: #87cefa;">g</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=(1/(1+x))
+  <span style="color: #87cefa;">h</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=(1+x)^(-1)
+  <span style="color: #87cefa;">j</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x={1/{1+x}}
+  <span style="color: #87cefa;">k</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=1/{1+x}
+  
+  <span style="color: #ffa500;">## </span><span style="color: #ffa500;">R 2.13.0 brings this toy</span>
+  <span style="color: #7fffd4;">library</span>(compiler)
+  lf <span style="color: #7fffd4;">&lt;-</span> cmpfun(f)
+  lg <span style="color: #7fffd4;">&lt;-</span> cmpfun(g)
+  lh <span style="color: #7fffd4;">&lt;-</span> cmpfun(h)
+  lj <span style="color: #7fffd4;">&lt;-</span> cmpfun(j)
+  lk <span style="color: #7fffd4;">&lt;-</span> cmpfun(k)
+  
+  <span style="color: #ffa500;">## </span><span style="color: #ffa500;">now load some tools</span>
+  <span style="color: #7fffd4;">library</span>(rbenchmark)
+  
+  N <span style="color: #7fffd4;">&lt;-</span> 1e6
+  
+  <span style="color: #ffa500;">## </span><span style="color: #ffa500;">now with Rcpp and C++</span>
+  <span style="color: #7fffd4;">library</span>(inline)
+  
+  <span style="color: #ffa500;">## </span><span style="color: #ffa500;">and define our version in C++</span>
+  src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'int n = as&lt;int&gt;(ns);</span>
+<span style="color: #ffa07a;">          double x = as&lt;double&gt;(xs);</span>
+<span style="color: #ffa07a;">          for (int i=0; i&lt;n; i++) x=1/(1+x);</span>
+<span style="color: #ffa07a;">          return wrap(x); '</span>
+  l <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(ns=<span style="color: #ffa07a;">"integer"</span>,
+                             xs=<span style="color: #ffa07a;">"numeric"</span>),
+                   body=src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+  
+  <span style="color: #ffa500;">## </span><span style="color: #ffa500;">now run the benchmark</span>
+  print(benchmark(f(N,1), g(N,1), h(N,1), j(N,1), k(N,1),
+            l(N,1),
+            lf(N,1), lg(N,1), lh(N,1), lj(N,1), lk(N,1),
+            columns=c(<span style="color: #ffa07a;">"test"</span>, <span style="color: #ffa07a;">"replications"</span>,
+            <span style="color: #ffa07a;">"elapsed"</span>, <span style="color: #ffa07a;">"relative"</span>),
+            order=<span style="color: #ffa07a;">"relative"</span>, replications=10))
+  
+  
 </pre>
 
 
 
 <pre class="example">       test replications elapsed  relative
-6   l(N, 1)           10   0.115   1.00000
-8  lg(N, 1)           10   3.494  30.38261
-10 lj(N, 1)           10   3.647  31.71304
-7  lf(N, 1)           10   3.667  31.88696
-11 lk(N, 1)           10   3.667  31.88696
-9  lh(N, 1)           10   4.529  39.38261
-5   k(N, 1)           10  14.382 125.06087
-1   f(N, 1)           10  14.821 128.87826
-4   j(N, 1)           10  16.281 141.57391
-2   g(N, 1)           10  16.824 146.29565
-3   h(N, 1)           10  21.195 184.30435
+6   l(N, 1)           10   0.117   1.00000
+10 lj(N, 1)           10   3.464  29.60684
+11 lk(N, 1)           10   3.502  29.93162
+7  lf(N, 1)           10   3.511  30.00855
+8  lg(N, 1)           10   3.550  30.34188
+9  lh(N, 1)           10   4.502  38.47863
+5   k(N, 1)           10  14.854 126.95726
+1   f(N, 1)           10  14.889 127.25641
+4   j(N, 1)           10  16.839 143.92308
+2   g(N, 1)           10  17.298 147.84615
+3   h(N, 1)           10  21.658 185.11111
 </pre>
 
 
@@ -375,8 +380,9 @@ print(benchmark(f(N,1), g(N,1), h(N,1), j(N,1), k(N,1),
 
 
 <p>
-Rcpp includes a related R package, <i>RInside</i>, which makes it possible
-to embed R in C++ applications.
+There is a package called <i>RInside</i> that uses Rcpp to embed R in C++
+applications.  The RInside package makes it easier to have 'R inside'
+your C++ application by providing a few wrapper classes.
 </p>
 
 </div>
@@ -393,12 +399,12 @@ comes with a helpful Makefile.  On my system it is located in:
 
 
 
-<pre class="example">/usr/lib64/R/library/RInside/examples/standard/Makefile
+<pre class="example">  /usr/lib64/R/library/RInside/examples/standard/Makefile
 </pre>
 
 
 <p>
-We want to "tangle" the following source-code block, but we need to
+HWe want to "tangle" the following source-code block, but we need to
 preserve the leading tab characters in order to keep "make" happy:
 </p>
 
@@ -468,8 +474,8 @@ clean:
 
 runAll:
                         <span style="color: #00ffff;">for</span> p<span style="color: #00ffff;"> in</span> $(<span style="color: #fa8072;">programs</span>); <span style="color: #00ffff;">do </span><span style="color: #b0c4de;">echo</span> <span style="color: #ffa07a;">"Running $$p"</span>; ./$<span style="color: #eedd82;">$</span>p; <span style="color: #00ffff;">done</span>
-
-
+ 
+  
 </pre>
 
 
@@ -480,27 +486,37 @@ Here's the C++ code for the "hello world" program:
 
 
 
-<pre class="src src-cpp"><span style="color: #b0c4de;">#include</span> <span style="color: #ffa07a;">&lt;RInside.h&gt;</span>              <span style="color: #ffa500;">// </span><span style="color: #ffa500;">embedded R via RInside</span>
-
-<span style="color: #98fb98;">int</span> <span style="color: #87cefa;">main</span>(<span style="color: #98fb98;">int</span> <span style="color: #eedd82;">argc</span>, <span style="color: #98fb98;">char</span> *<span style="color: #eedd82;">argv</span>[]) {
-
-    <span style="color: #98fb98;">RInside</span> <span style="color: #eedd82;">R</span>(argc, argv);        <span style="color: #ffa500;">// </span><span style="color: #ffa500;">create embedded R inst.</span>
-
-    R[<span style="color: #ffa07a;">"txt"</span>] = <span style="color: #ffa07a;">"Hello, world!\n"</span>; <span style="color: #ffa500;">// </span><span style="color: #ffa500;">assign  to 'txt' in R</span>
-
-    R.parseEvalQ(<span style="color: #ffa07a;">"cat(txt)"</span>);     <span style="color: #ffa500;">// </span><span style="color: #ffa500;">eval string, ignore result</span>
-
-    exit(0);
-}
-
+<pre class="src src-cpp">  
+<span style="color: #b0c4de;">  #include</span> <span style="color: #ffa07a;">&lt;RInside.h&gt;</span>              <span style="color: #ffa500;">// </span><span style="color: #ffa500;">embedded R via RInside</span>
+  
+  <span style="color: #98fb98;">int</span> <span style="color: #87cefa;">main</span>(<span style="color: #98fb98;">int</span> <span style="color: #eedd82;">argc</span>, <span style="color: #98fb98;">char</span> *<span style="color: #eedd82;">argv</span>[]) {
+  
+      <span style="color: #98fb98;">RInside</span> <span style="color: #eedd82;">R</span>(argc, argv);        <span style="color: #ffa500;">// </span><span style="color: #ffa500;">create embedded R inst.</span>
+  
+      R[<span style="color: #ffa07a;">"txt"</span>] = <span style="color: #ffa07a;">"Hello, world!\n"</span>; <span style="color: #ffa500;">// </span><span style="color: #ffa500;">assign  to 'txt' in R</span>
+  
+      R.parseEvalQ(<span style="color: #ffa07a;">"cat(txt)"</span>);     <span style="color: #ffa500;">// </span><span style="color: #ffa500;">eval string, ignore result</span>
+  
+      exit(0);
+  }
+  
 </pre>
 
 
 
-<pre class="src src-sh">make -f Makefile.demo
+
+<pre class="src src-sh">make -f Makefile.tangled
 ./RI-hw
 
 </pre>
+
+
+<pre class="example">
+Starting R at:
+[1] "2012-06-04 21:55:02 PDT"
+Hello, world!
+</pre>
+
 
 
 
@@ -520,9 +536,51 @@ Here's the C++ code for the "hello world" program:
 
 
 
+
+<pre class="src src-sh">cat RI-graphics.cpp
+make -f Makefile.tangled
+./RI-graphics
+
+</pre>
+
+
+
 <pre class="example">
+// Simple example motivated by post from Paul Smith &lt;phhs80@gmail.com&gt;
+// to r-help on 06 Mar 2011
+//
+// Copyright (C) 2011  Dirk Eddelbuettel and Romain Francois
+
+#include &lt;RInside.h&gt;                    // for the embedded R via RInside
+
+int main(int argc, char *argv[]) {
+
+  // create an embedded R instance
+  RInside R(argc, argv);               
+
+  // evaluate an R expression with curve() 
+  // because RInside defaults to interactive=false we use a file
+  // std::string cmd = "tmpf &lt;- tempfile('curve'); " 
+  std::string cmd = "tmpf &lt;- 'RIgraphics.png'; "
+    "png(tmpf); "
+    "curve(x^2, -10, 10, 200); "
+    "dev.off();"
+    "tmpf";
+  // by running parseEval, we get the last assignment back, here the filename
+  std::string tmpfile = R.parseEval(cmd);
+
+  std::cout &lt;&lt; "Could now use plot in " &lt;&lt; tmpfile &lt;&lt; std::endl;
+  // unlink(tmpfile.c_str());		// cleaning up
+
+  // alternatively, by forcing a display we can plot to screen
+  cmd = "x11(); curve(x^2, -10, 10, 200); Sys.sleep(10);";
+  // parseEvalQ evluates without assignment
+  R.parseEvalQ(cmd);
+    
+  exit(0);
+}
 Starting R at:
-[1] "2012-06-04 16:32:41 PDT"
+[1] "2012-06-04 21:55:05 PDT"
 Could now use plot in RIgraphics.png
 </pre>
 
@@ -545,46 +603,64 @@ Could now use plot in RIgraphics.png
 
 
 
-<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+<pre class="src src-R">  
+  <span style="color: #7fffd4;">library</span>(inline)
+  
+  src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">      Rcpp::IntegerVector vec(vx);</span>
+<span style="color: #ffa07a;">      int prod = 1;</span>
+<span style="color: #ffa07a;">      for (int i=0; i&lt;vec.size(); i++) {</span>
+<span style="color: #ffa07a;">          prod *= vec[i];</span>
+<span style="color: #ffa07a;">      }</span>
+<span style="color: #ffa07a;">      return Rcpp::wrap(prod);</span>
+<span style="color: #ffa07a;">  '</span>
+  funLoop <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(vx=<span style="color: #ffa07a;">"integer"</span>),
+                     src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+  funLoop(1L:10L)
+  
+    
+  <span style="color: #ffa500;">## </span><span style="color: #ffa500;">Can also use a sort of "vectorized" approach</span>
 
-src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+  src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
 <span style="color: #ffa07a;">    Rcpp::IntegerVector vec(vx);</span>
-<span style="color: #ffa07a;">    int prod = 1;</span>
-<span style="color: #ffa07a;">    for (int i=0; i&lt;vec.size(); i++) {</span>
-<span style="color: #ffa07a;">        prod *= vec[i];</span>
-<span style="color: #ffa07a;">    }</span>
+<span style="color: #ffa07a;">    int prod = std::accumulate(vec.begin(), vec.end(),</span>
+<span style="color: #ffa07a;">                               1, std::multiplies&lt;int&gt;());</span>
 <span style="color: #ffa07a;">    return Rcpp::wrap(prod);</span>
-<span style="color: #ffa07a;">'</span>
-funLoop <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(vx=<span style="color: #ffa07a;">"integer"</span>),
-                   src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
-funLoop(1L:10L)
+<span style="color: #ffa07a;">  '</span>
+  funVec <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(vx=<span style="color: #ffa07a;">"integer"</span>),
+                     src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+  funVec(1L:10L)
+  
 
+  <span style="color: #ffa500;">## </span><span style="color: #ffa500;">But there's not much (or any) performance advantage</span>
+  <span style="color: #ffa500;">###### </span><span style="color: #ffa500;">This needs work ###################################</span>
 
-<span style="color: #ffa500;">## </span><span style="color: #ffa500;">Can also use a sort of "vectorized" approach</span>
-
-src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
-<span style="color: #ffa07a;">  Rcpp::IntegerVector vec(vx);</span>
-<span style="color: #ffa07a;">  int prod = std::accumulate(vec.begin(), vec.end(),</span>
-<span style="color: #ffa07a;">                             1, std::multiplies&lt;int&gt;());</span>
-<span style="color: #ffa07a;">  return Rcpp::wrap(prod);</span>
-<span style="color: #ffa07a;">'</span>
-funVec <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(vx=<span style="color: #ffa07a;">"integer"</span>),
-                   src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
-funVec(1L:10L)
-
-
-<span style="color: #ffa500;">## </span><span style="color: #ffa500;">But there's not much (or any) performance advantage</span>
-<span style="color: #ffa500;">###### </span><span style="color: #ffa500;">This needs work ###################################</span>
-
-<span style="color: #7fffd4;">library</span>(rbenchmark)
-
-print(benchmark(funLoop(1L:1000L), funVec(1L:1000L),
-          columns=c(<span style="color: #ffa07a;">"test"</span>,    <span style="color: #ffa07a;">"replications"</span>,
-                    <span style="color: #ffa07a;">"elapsed"</span>, <span style="color: #ffa07a;">"relative"</span>),
-          order=c(<span style="color: #ffa07a;">"replications"</span>, <span style="color: #ffa07a;">"elapsed"</span>), replications=10^(1:5)))
+  <span style="color: #7fffd4;">library</span>(rbenchmark)
+  
+  print(benchmark(funLoop(1L:1000L), funVec(1L:1000L),
+            columns=c(<span style="color: #ffa07a;">"test"</span>,    <span style="color: #ffa07a;">"replications"</span>,
+                      <span style="color: #ffa07a;">"elapsed"</span>, <span style="color: #ffa07a;">"relative"</span>),
+            order=c(<span style="color: #ffa07a;">"replications"</span>, <span style="color: #ffa07a;">"elapsed"</span>), replications=10^(1:5)))
 
 
 
+</pre>
+
+
+
+<pre class="example">[1] 3628800
+[1] 3628800
+              test replications elapsed relative
+1  funLoop(1:1000)           10   0.000        0
+6   funVec(1:1000)           10   0.001        1
+7   funVec(1:1000)          100   0.001        1
+2  funLoop(1:1000)          100   0.002        2
+8   funVec(1:1000)         1000   0.010       10
+3  funLoop(1:1000)         1000   0.015       15
+9   funVec(1:1000)        10000   0.108      108
+4  funLoop(1:1000)        10000   0.154      154
+10  funVec(1:1000)       100000   1.172     1172
+5  funLoop(1:1000)       100000   1.562     1562
 </pre>
 
 
@@ -641,7 +717,7 @@ memory management.
 </div>
 
 <div id="outline-container-5-1" class="outline-3">
-<h3 id="sec-5-1"><span class="section-number-3">5.1</span> Nasty example: "remember to clone"</h3>
+<h3 id="sec-5-1"><span class="section-number-3">5.1</span> Nasty example: cast ~ clone</h3>
 <div class="outline-text-3" id="text-5-1">
 
 
@@ -810,6 +886,14 @@ fun(mat)
 </pre>
 
 
+<pre class="example">
+     [,1] [,2] [,3]
+[1,]    1    4    7
+[2,]    2    5    8
+[3,]    3    6    9
+</pre>
+
+
 </div>
 
 </div>
@@ -831,19 +915,40 @@ The RcppArmadillo package makes it easy to use Armadillo in Rcpp.
 
 
 
-<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+<pre class="src src-R">  <span style="color: #7fffd4;">library</span>(inline)
+  
+  src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">    arma::mat m1 = Rcpp::as&lt;arma::mat&gt;(mx);</span>
+<span style="color: #ffa07a;">    arma::mat m2 = m1 + m1;</span>
+<span style="color: #ffa07a;">    arma::mat m3 = m1 * 3;</span>
+<span style="color: #ffa07a;">    return Rcpp::List::create(m1, m2, m3); '</span>
+  fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(mx=<span style="color: #ffa07a;">"numeric"</span>), src,
+                     plugin=<span style="color: #ffa07a;">"RcppArmadillo"</span>)
+  mat <span style="color: #7fffd4;">&lt;-</span> matrix(1:9, 3, 3)
+  mat2 <span style="color: #7fffd4;">&lt;-</span> fun(mat)
+  print(mat2)
 
-src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
-<span style="color: #ffa07a;">  arma::mat m1 = Rcpp::as&lt;arma::mat&gt;(mx);</span>
-<span style="color: #ffa07a;">  arma::mat m2 = m1 + m1;</span>
-<span style="color: #ffa07a;">  arma::mat m3 = m1 * 3;</span>
-<span style="color: #ffa07a;">  return Rcpp::List::create(m1, m2, m3); '</span>
-fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(mx=<span style="color: #ffa07a;">"numeric"</span>), src,
-                   plugin=<span style="color: #ffa07a;">"RcppArmadillo"</span>)
-mat <span style="color: #7fffd4;">&lt;-</span> matrix(1:9, 3, 3)
-mat2 <span style="color: #7fffd4;">&lt;-</span> fun(mat)
-print(mat2)
+</pre>
 
+
+
+<pre class="example">[[1]]
+     [,1] [,2] [,3]
+[1,]    1    4    7
+[2,]    2    5    8
+[3,]    3    6    9
+
+[[2]]
+     [,1] [,2] [,3]
+[1,]    2    8   14
+[2,]    4   10   16
+[3,]    6   12   18
+
+[[3]]
+     [,1] [,2] [,3]
+[1,]    3   12   21
+[2,]    6   15   24
+[3,]    9   18   27
 </pre>
 
 
@@ -881,25 +986,25 @@ Title:              Rcpp integration for the Eigen templated linear
 
 
 
-<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+<pre class="src src-R">  <span style="color: #7fffd4;">library</span>(inline)
+  
+  src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">    arma::mat m1 = Rcpp::as&lt;arma::mat&gt;(mx);</span>
+<span style="color: #ffa07a;">    arma::vec eigval;</span>
+<span style="color: #ffa07a;">    arma::mat eigvec;</span>
 
-src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
-<span style="color: #ffa07a;">  arma::mat m1 = Rcpp::as&lt;arma::mat&gt;(mx);</span>
-<span style="color: #ffa07a;">  arma::vec eigval;</span>
-<span style="color: #ffa07a;">  arma::mat eigvec;</span>
+<span style="color: #ffa07a;">    eig_sym(eigval, eigvec, m1);</span>
 
-<span style="color: #ffa07a;">  eig_sym(eigval, eigvec, m1);</span>
-
-<span style="color: #ffa07a;">  return Rcpp::List::create(m1, eigval, eigvec); '</span>
-fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(mx=<span style="color: #ffa07a;">"numeric"</span>), src,
-                   plugin=<span style="color: #ffa07a;">"RcppArmadillo"</span>)
+<span style="color: #ffa07a;">    return Rcpp::List::create(m1, eigval, eigvec); '</span>
+  fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(mx=<span style="color: #ffa07a;">"numeric"</span>), src,
+                     plugin=<span style="color: #ffa07a;">"RcppArmadillo"</span>)
 
 
-mat <span style="color: #7fffd4;">&lt;-</span> matrix (rbind(c(3, 2, 4),
-                     c(2, 0, 2),
-                     c(4, 2, 3)), nrow=3, ncol=3)
+  mat <span style="color: #7fffd4;">&lt;-</span> matrix (rbind(c(3, 2, 4),
+                       c(2, 0, 2),
+                       c(4, 2, 3)), nrow=3, ncol=3)
 
-print(fun(mat))
+  print(fun(mat))
 
 
 </pre>
@@ -988,35 +1093,50 @@ would have gotten the same result had we defined the vectors in R and
 invoked the same function directly in R.
 </p>
 <p>
-But in a real use case, we would have proceede to do further
-calculations inside the C+ code.
+But in a real use case, we would have proceeded to do further
+calculations inside the C++ code.
 </p>
 
 
 
-<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
-src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
-<span style="color: #ffa07a;">  Rcpp::Function expGrid("expand.grid");</span>
-<span style="color: #ffa07a;">  IntegerVector v1;</span>
-<span style="color: #ffa07a;">  IntegerVector v2;</span>
+<pre class="src src-R">   
+  <span style="color: #7fffd4;">library</span>(inline)
+  src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">    Rcpp::Function expGrid("expand.grid");</span>
+<span style="color: #ffa07a;">    IntegerVector v1;</span>
+<span style="color: #ffa07a;">    IntegerVector v2;</span>
 
-<span style="color: #ffa07a;">  v1.push_back(1);</span>
-<span style="color: #ffa07a;">  v1.push_back(3);</span>
-<span style="color: #ffa07a;">  v1.push_back(5);</span>
+<span style="color: #ffa07a;">    v1.push_back(1);</span>
+<span style="color: #ffa07a;">    v1.push_back(3);</span>
+<span style="color: #ffa07a;">    v1.push_back(5);</span>
 
-<span style="color: #ffa07a;">  v2.push_back(2);</span>
-<span style="color: #ffa07a;">  v2.push_back(4);</span>
-<span style="color: #ffa07a;">  v2.push_back(6);</span>
+<span style="color: #ffa07a;">    v2.push_back(2);</span>
+<span style="color: #ffa07a;">    v2.push_back(4);</span>
+<span style="color: #ffa07a;">    v2.push_back(6);</span>
 
-<span style="color: #ffa07a;">  return(expGrid(v1, v2));'</span>
+<span style="color: #ffa07a;">    return(expGrid(v1, v2));'</span>
+  
+    fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(),
+                       src,
+                       plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+    print(fun())
+  
+  
+  
+</pre>
 
-  fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(),
-                     src,
-                     plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
-  print(fun())
 
 
-
+<pre class="example">  Var1 Var2
+1    1    2
+2    3    2
+3    5    2
+4    1    4
+5    3    4
+6    5    4
+7    1    6
+8    3    6
+9    5    6
 </pre>
 
 
@@ -1037,19 +1157,27 @@ named "sort", but that name is, in effect, a dummy variable.
 
 
 
-<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+<pre class="src src-R">  
+  <span style="color: #7fffd4;">library</span>(inline)
 
-src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
-<span style="color: #ffa07a;">  Function sort(x) ;</span>
-<span style="color: #ffa07a;">  return sort( y, Named("decreasing", true));'</span>
-fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(x=<span style="color: #ffa07a;">"function"</span>,
-                             y=<span style="color: #ffa07a;">"ANY"</span>),
-                    src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>, verbose=<span style="color: #98fb98;">FALSE</span>)
-fun(sort, sample(1:5, 10, <span style="color: #98fb98;">TRUE</span>))
-fun(sort, sample(LETTERS[1:5], 10, <span style="color: #98fb98;">TRUE</span>))
-fun(mean, sample(1:100, 10, <span style="color: #98fb98;">TRUE</span>))
+  src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">    Function sort(x) ;</span>
+<span style="color: #ffa07a;">    return sort( y, Named("decreasing", true));'</span>
+  fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(x=<span style="color: #ffa07a;">"function"</span>,
+                               y=<span style="color: #ffa07a;">"ANY"</span>),
+                      src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>, verbose=<span style="color: #98fb98;">FALSE</span>)
+  fun(sort, sample(1:5, 10, <span style="color: #98fb98;">TRUE</span>))
+  fun(sort, sample(LETTERS[1:5], 10, <span style="color: #98fb98;">TRUE</span>))
+  fun(mean, sample(1:100, 10, <span style="color: #98fb98;">TRUE</span>))
+  
+  
+</pre>
 
 
+<pre class="example">
+ [1] 5 5 4 4 3 3 3 2 1 1
+ [1] "E" "E" "D" "D" "C" "B" "B" "B" "B" "A"
+[1] 55.7
 </pre>
 
 
@@ -1071,18 +1199,25 @@ an alternative way of accessing functions from R.
 
 
 
-<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+<pre class="src src-R">  
+  <span style="color: #7fffd4;">library</span>(inline)
+  
+  src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">      Rcpp::Environment stats("package:stats");</span>
+<span style="color: #ffa07a;">      Rcpp::Function rnorm = stats["rnorm"];</span>
+<span style="color: #ffa07a;">      return rnorm(10, Rcpp::Named("sd", 100.0));</span>
+<span style="color: #ffa07a;">  '</span>
+  
+  fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(),
+                     src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+  fun()
+  
+</pre>
 
-src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
-<span style="color: #ffa07a;">    Rcpp::Environment stats("package:stats");</span>
-<span style="color: #ffa07a;">    Rcpp::Function rnorm = stats["rnorm"];</span>
-<span style="color: #ffa07a;">    return rnorm(10, Rcpp::Named("sd", 100.0));</span>
-<span style="color: #ffa07a;">'</span>
 
-fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(),
-                   src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
-fun()
-
+<pre class="example">
+ [1] -124.014576  119.481071   19.257429  -98.403658 -147.868610  -30.995072   -1.498279
+ [8]  144.714041 -163.152249  102.021648
 </pre>
 
 
@@ -1132,11 +1267,12 @@ Eddelbuettel/Francois have wrapped and extended this function to
 
 
 
-<pre class="src src-R"><span style="color: #7fffd4;">library</span>(Rcpp)
-<span style="color: #00ffff;">if</span> (!file.exists(<span style="color: #ffa07a;">"./UCDpackage"</span>)) {
-    Rcpp.package.skeleton( <span style="color: #ffa07a;">"UCDpackage"</span> )
-}
-
+<pre class="src src-R">  
+  <span style="color: #7fffd4;">library</span>(Rcpp)
+  <span style="color: #00ffff;">if</span> (!file.exists(<span style="color: #ffa07a;">"./UCDpackage"</span>)) {
+      Rcpp.package.skeleton( <span style="color: #ffa07a;">"UCDpackage"</span> )
+  }
+  
 </pre>
 
 
@@ -1175,8 +1311,9 @@ Adding Rcpp settings
 
 
 
-<pre class="src src-sh">tree UCDpackage
-
+<pre class="src src-sh">  
+  tree UCDpackage
+  
 </pre>
 
 
@@ -1214,8 +1351,9 @@ Adding Rcpp settings
 
 
 
-<pre class="src src-sh">cat ./UCDpackage/src/rcpp_hello_world.h
-
+<pre class="src src-sh">  
+  cat ./UCDpackage/src/rcpp_hello_world.h
+  
 </pre>
 
 
@@ -1254,8 +1392,9 @@ RcppExport SEXP rcpp_hello_world() ;
 
 
 
-<pre class="src src-sh">cat ./UCDpackage/src/rcpp_hello_world.cpp
-
+<pre class="src src-sh">  
+  cat ./UCDpackage/src/rcpp_hello_world.cpp
+  
 </pre>
 
 
@@ -1288,8 +1427,9 @@ SEXP rcpp_hello_world(){
 
 
 
-<pre class="src src-sh">cat ./UCDpackage/R/rcpp_hello_world.R
-
+<pre class="src src-sh">  
+  cat ./UCDpackage/R/rcpp_hello_world.R
+  
 </pre>
 
 
@@ -1320,8 +1460,9 @@ on Rcpp.
 
 
 
-<pre class="src src-sh">cat ./UCDpackage/DESCRIPTION
-
+<pre class="src src-sh">  
+  cat ./UCDpackage/DESCRIPTION
+  
 </pre>
 
 
@@ -1357,8 +1498,9 @@ The regular expression exports all symbols.
 
 
 
-<pre class="src src-sh">cat ./UCDpackage/NAMESPACE
-
+<pre class="src src-sh">  
+  cat ./UCDpackage/NAMESPACE
+  
 </pre>
 
 
@@ -1382,8 +1524,9 @@ exportPattern("^[[:alpha:]]+")
 
 
 
-<pre class="src src-sh">cat ./UCDpackage/src/Makevars
-
+<pre class="src src-sh">  
+  cat ./UCDpackage/src/Makevars
+  
 </pre>
 
 
@@ -1432,8 +1575,9 @@ PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"`
 
 
 
-<pre class="src src-sh">cat ./UCDpackage/src/Makevars.win
-
+<pre class="src src-sh">  
+  cat ./UCDpackage/src/Makevars.win
+  
 </pre>
 
 
@@ -1461,9 +1605,10 @@ Something in my .Rprofile was causing a problem.
 
 
 
-<pre class="src src-sh">mv ~/.Rprofile ~/.Rprofile.save
-R CMD INSTALL -l ~/R/library UCDpackage
-mv ~/.Rprofile.save ~/.Rprofile  
+<pre class="src src-sh">  
+  mv ~/.Rprofile ~/.Rprofile.save
+  R CMD INSTALL -l ~/R/library UCDpackage
+  mv ~/.Rprofile.save ~/.Rprofile  
 
 </pre>
 
@@ -1492,9 +1637,10 @@ make: Nothing to be done for `all'.
 
 
 
-<pre class="src src-R"><span style="color: #7fffd4;">library</span>(<span style="color: #ffa07a;">"UCDpackage"</span>, lib.loc=<span style="color: #ffa07a;">"~/R/library"</span>)
-rcpp_hello_world()
-
+<pre class="src src-R">  
+  <span style="color: #7fffd4;">library</span>(<span style="color: #ffa07a;">"UCDpackage"</span>, lib.loc=<span style="color: #ffa07a;">"~/R/library"</span>)
+  rcpp_hello_world()
+  
 </pre>
 
 
@@ -1565,22 +1711,23 @@ aka, SEXP &ndash; i.e. something that R can understand.)
 
 
 
-<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
-includes <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
-<span style="color: #ffa07a;">        double square( double x){</span>
-<span style="color: #ffa07a;">          return x*x ;</span>
-<span style="color: #ffa07a;">        }'</span>
-
-src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'NumericVector x(xx);</span>
-<span style="color: #ffa07a;">        return wrap(sapply( x, square ));'</span>
-
-fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(xx=<span style="color: #ffa07a;">"numeric"</span>),
-                   body=src,
-                   plugin=<span style="color: #ffa07a;">"Rcpp"</span>,
-                   includes=includes)
-
-fun(c(1, 3, 5, 7, 9))
-
+<pre class="src src-R">  
+  <span style="color: #7fffd4;">library</span>(inline)
+  includes <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">          double square( double x){</span>
+<span style="color: #ffa07a;">            return x*x ;</span>
+<span style="color: #ffa07a;">          }'</span>
+  
+  src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'NumericVector x(xx);</span>
+<span style="color: #ffa07a;">          return wrap(sapply( x, square ));'</span>
+  
+  fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(xx=<span style="color: #ffa07a;">"numeric"</span>),
+                     body=src,
+                     plugin=<span style="color: #ffa07a;">"Rcpp"</span>,
+                     includes=includes)
+  
+  fun(c(1, 3, 5, 7, 9))
+  
 </pre>
 
 
@@ -1607,47 +1754,48 @@ significant performance advantage to using Rcpp/C++.
 
 
 
-<pre class="src src-R"><span style="color: #87cefa;">foo</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(x) {
-
-    <span style="color: #ffa500;">## </span><span style="color: #ffa500;">sum of</span>
-    <span style="color: #ffa500;">##  </span><span style="color: #ffa500;">-- squares of negatives</span>
-    <span style="color: #ffa500;">##  </span><span style="color: #ffa500;">-- exponentials of positives</span>
-    s <span style="color: #7fffd4;">&lt;-</span> sum(ifelse( x &lt; 0,  x*x,  exp(x) ))
-
-    <span style="color: #00ffff;">return</span>(s)
-}
-
-
-<span style="color: #7fffd4;">library</span>(inline)
-
-cppfoo <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(xs=<span style="color: #ffa07a;">"numeric"</span>),
-                   plugin=<span style="color: #ffa07a;">"Rcpp"</span>, body=<span style="color: #ffa07a;">'</span>
-
-<span style="color: #ffa07a;">   NumericVector x(xs);</span>
-
-<span style="color: #ffa07a;">   double s = sum( ifelse( x &lt; 0, x*x, exp(x) ));</span>
-
-<span style="color: #ffa07a;">   return wrap(s);</span>
-<span style="color: #ffa07a;">'</span>)
-
-<span style="color: #7fffd4;">library</span>(compiler)
-Rcmpfoo <span style="color: #7fffd4;">&lt;-</span> cmpfun(foo)
-
-<span style="color: #7fffd4;">library</span>(rbenchmark)
-x <span style="color: #7fffd4;">&lt;-</span> rnorm(1e5)
-benchmark(foo(x), Rcmpfoo(x), cppfoo(x),
-          columns=c(<span style="color: #ffa07a;">"test"</span>, <span style="color: #ffa07a;">"elapsed"</span>, <span style="color: #ffa07a;">"relative"</span>, <span style="color: #ffa07a;">"user.self"</span>, <span style="color: #ffa07a;">"sys.self"</span>),
-          order=<span style="color: #ffa07a;">"relative"</span>, replications=10)
-
-
+<pre class="src src-R">  
+  <span style="color: #87cefa;">foo</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(x) {
+  
+      <span style="color: #ffa500;">## </span><span style="color: #ffa500;">sum of</span>
+      <span style="color: #ffa500;">##  </span><span style="color: #ffa500;">-- squares of negatives</span>
+      <span style="color: #ffa500;">##  </span><span style="color: #ffa500;">-- exponentials of positives</span>
+      s <span style="color: #7fffd4;">&lt;-</span> sum(ifelse( x &lt; 0,  x*x,  exp(x) ))
+  
+      <span style="color: #00ffff;">return</span>(s)
+  }
+  
+  
+  <span style="color: #7fffd4;">library</span>(inline)
+  
+  cppfoo <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(xs=<span style="color: #ffa07a;">"numeric"</span>),
+                     plugin=<span style="color: #ffa07a;">"Rcpp"</span>, body=<span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">  </span>
+<span style="color: #ffa07a;">     NumericVector x(xs);</span>
+<span style="color: #ffa07a;">  </span>
+<span style="color: #ffa07a;">     double s = sum( ifelse( x &lt; 0, x*x, exp(x) ));</span>
+<span style="color: #ffa07a;">  </span>
+<span style="color: #ffa07a;">     return wrap(s);</span>
+<span style="color: #ffa07a;">  '</span>)
+  
+  <span style="color: #7fffd4;">library</span>(compiler)
+  Rcmpfoo <span style="color: #7fffd4;">&lt;-</span> cmpfun(foo)
+  
+  <span style="color: #7fffd4;">library</span>(rbenchmark)
+  x <span style="color: #7fffd4;">&lt;-</span> rnorm(1e5)
+  benchmark(foo(x), Rcmpfoo(x), cppfoo(x),
+            columns=c(<span style="color: #ffa07a;">"test"</span>, <span style="color: #ffa07a;">"elapsed"</span>, <span style="color: #ffa07a;">"relative"</span>, <span style="color: #ffa07a;">"user.self"</span>, <span style="color: #ffa07a;">"sys.self"</span>),
+            order=<span style="color: #ffa07a;">"relative"</span>, replications=10)
+  
+  
 </pre>
 
 
 <pre class="example">
         test elapsed relative user.self sys.self
-3  cppfoo(x)   0.035  1.00000     0.036        0
-2 Rcmpfoo(x)   0.980 28.00000     0.959        0
-1     foo(x)   1.110 31.71429     1.104        0
+3  cppfoo(x)   0.035  1.00000     0.035    0.000
+2 Rcmpfoo(x)   0.897 25.62857     0.887    0.008
+1     foo(x)   0.969 27.68571     0.947    0.002
 </pre>
 
 
@@ -1658,7 +1806,7 @@ benchmark(foo(x), Rcmpfoo(x), cppfoo(x),
 </div>
 
 <div id="postamble">
-<p class="date">Date: 2012-06-04T16:33-0700</p>
+<p class="date">Date: 2012-06-04T21:56-0700</p>
 <p class="author">Author: Michael Hannon</p>
 <p class="creator">Org version 7.8.09 with Emacs version 23</p>
 <a href="http://validator.w3.org/check?uri=referer">Validate XHTML 1.0</a>

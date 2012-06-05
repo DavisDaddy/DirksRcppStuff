@@ -1,3 +1,11 @@
+#+LATEX_HEADER: \addtolength{\oddsidemargin}{-.875in}
+#+LATEX_HEADER: \addtolength{\evensidemargin}{-.875in}
+#+LATEX_HEADER: \addtolength{\textwidth}{1.75in}
+
+#+LATEX_HEADER: \addtolength{\topmargin}{-.875in}
+#+LATEX_HEADER: \addtolength{\textheight}{1.75in}
+
+
 * A few words about C++
 
 - C++ is a statically typed, free-form, multi-paradigm, compiled,
@@ -6,7 +14,9 @@
 - Developed by Bjarne Stroustrup at Bell Labs, starting in late 1970's
   as a sort of generalization of the C language (hence, the name).
 
-- C++ today is a "federation of four languages" (Eddelbuettel).
+- C++ today is a "federation of four languages" (Scott Meyers,
+  http://www.aristeia.com/books.html, as quoted by Dirk Eddelbuettel).
+
   + Compiled rather than interpreted (like C, Fortran, etc.)
   + OOP ("marries data with code")
   + Generic programming (Standard Template Library)
@@ -40,8 +50,8 @@ class given by Dirk Eddelbuetel and Romain Francois.
 
 ** Caveat
 
-Rcpp is a moving target, and much of the documentation that is "in the
-wild" does *not* represent the current state of the software.
+Rcpp is a moving target, and some of the older documentation that is "in the
+wild" may *not* represent the current state of the software.
 
 ** Why use Rcpp?
 
@@ -100,11 +110,11 @@ wild" does *not* represent the current state of the software.
   
 #+END_SRC
 
-
 ** RInside: the other way around
 
-Rcpp includes a related R package, /RInside/, which makes it possible
-to embed R in C++ applications.
+There is a package called /RInside/ that uses Rcpp to embed R in C++
+applications.  The RInside package makes it easier to have 'R inside'
+your C++ application by providing a few wrapper classes.
 
 *** RInside: the "hello world" example
 
@@ -126,7 +136,7 @@ preserve the leading tab characters in order to keep "make" happy:
 
 Here's the Makefile:
 
-#+BEGIN_SRC sh :tangle Makefile.demo
+#+BEGIN_SRC sh :tangle Makefile.tangled
 
 ## -*- mode: make; tab-width: 8; -*-
 ##
@@ -205,9 +215,10 @@ Here's the C++ code for the "hello world" program:
   
 #+END_SRC
 
-#+BEGIN_SRC sh :results output
 
-make -f Makefile.demo
+#+BEGIN_SRC sh :results output :exports both
+
+make -f Makefile.tangled
 ./RI-hw
 
 #+END_SRC
@@ -254,12 +265,15 @@ int main(int argc, char *argv[]) {
 
 #+END_SRC
 
-#+BEGIN_SRC sh :results output graphics :exports results
+#+BEGIN_SRC sh :results output graphics :exports both
 
-make -f Makefile.demo
+cat RI-graphics.cpp
+make -f Makefile.tangled
 ./RI-graphics
 
 #+END_SRC
+
+[[./RIgraphics.png]]
 
 
 ** Product of integer vector with C++ loop
@@ -308,7 +322,6 @@ make -f Makefile.demo
 
 #+END_SRC
 
-
 * A peek under the hood
 
 #+BEGIN_QUOTE
@@ -331,7 +344,7 @@ memory management.
 
 * Some words about constructors
 
-** Nasty example: "remember to clone"
+** Nasty example: cast ~ clone
 
 What is the difference between the two invocations of "fun" below?
 
@@ -360,8 +373,6 @@ fun(1L:3L)
 
 
 #+END_SRC
-
-
 
 In the first case, R is invoking "fun" with a vector of three real
 numbers.  Therefore:
@@ -465,7 +476,6 @@ The RcppArmadillo package makes it easy to use Armadillo in Rcpp.
 
 #+END_SRC
 
-
 Note, by the way, that some people prefer the "Eigen" package for this
 kind of thing:
 
@@ -509,7 +519,6 @@ Title:              Rcpp integration for the Eigen templated linear
 
 
 #+END_SRC
-
 
 * Many other data types in Rcpp
 
@@ -563,7 +572,6 @@ calculations inside the C++ code.
   
 #+END_SRC
 
-
 *** Example: passing functions from R to C++
 
 Note the third invocation of "fun".  In the C++ code the function is
@@ -586,7 +594,6 @@ named "sort", but that name is, in effect, a dummy variable.
   
 #+END_SRC
 
-
 ** Environment
 
 The Environment class allows us to access R environments.  It provides
@@ -608,13 +615,10 @@ an alternative way of accessing functions from R.
   
 #+END_SRC
 
-
 ** S4 classes
 
 S4 classes can also be created or altered at the C++ level.  Example
 omitted.
-
-
 
 * Creating a package with Rcpp
 
@@ -635,7 +639,6 @@ Eddelbuettel/Francois have wrapped and extended this function to
   
 #+END_SRC
 
-
 ** A look at the file structure of the skeleton package
 
 #+BEGIN_SRC sh :results output :exports both
@@ -643,7 +646,6 @@ Eddelbuettel/Francois have wrapped and extended this function to
   tree UCDpackage
   
 #+END_SRC
-
 
 ** The C++ header file
 
@@ -653,7 +655,6 @@ Eddelbuettel/Francois have wrapped and extended this function to
   
 #+END_SRC
 
-
 ** The C++ source file
 
 #+BEGIN_SRC sh :results output :exports both
@@ -662,7 +663,6 @@ Eddelbuettel/Francois have wrapped and extended this function to
   
 #+END_SRC
 
-
 ** The R file
 
 #+BEGIN_SRC sh :results output :exports both
@@ -670,7 +670,6 @@ Eddelbuettel/Francois have wrapped and extended this function to
   cat ./UCDpackage/R/rcpp_hello_world.R
   
 #+END_SRC
-
 
 ** The DESCRIPTION file
 
@@ -683,7 +682,6 @@ on Rcpp.
   
 #+END_SRC
 
-
 ** The NAMESPACE file
 
 The regular expression exports all symbols.
@@ -693,7 +691,6 @@ The regular expression exports all symbols.
   cat ./UCDpackage/NAMESPACE
   
 #+END_SRC
-
 
 ** The standard Makevars file
 
@@ -712,7 +709,6 @@ The regular expression exports all symbols.
   
 #+END_SRC
 
-
 ** Installation
 
 Something in my .Rprofile was causing a problem.
@@ -725,7 +721,6 @@ Something in my .Rprofile was causing a problem.
 
 #+END_SRC
 
-
 ** Use of the package
 
 #+BEGIN_SRC R :results output :session *R* :exports both
@@ -734,7 +729,6 @@ Something in my .Rprofile was causing a problem.
   rcpp_hello_world()
   
 #+END_SRC
-
 
 * Syntactic sugar
 
@@ -785,7 +779,6 @@ aka, SEXP -- i.e. something that R can understand.)
   
 #+END_SRC
 
-
 ** Sugar example with benchmark
 
 Note that the C++ syntax is very "R-like", but that there is a
@@ -827,6 +820,4 @@ significant performance advantage to using Rcpp/C++.
   
   
 #+END_SRC
-
-
 
