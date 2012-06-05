@@ -1,0 +1,832 @@
+* A few words about C++
+
+- C++ is a statically typed, free-form, multi-paradigm, compiled,
+  general-purpose programming language (Wikipedia).
+
+- Developed by Bjarne Stroustrup at Bell Labs, starting in late 1970's
+  as a sort of generalization of the C language (hence, the name).
+
+- C++ today is a "federation of four languages" (Eddelbuettel).
+  + Compiled rather than interpreted (like C, Fortran, etc.)
+  + OOP ("marries data with code")
+  + Generic programming (Standard Template Library)
+  + Template programming
+
+- Many recent developments:
+  http://herbsutter.com/2012/04/12/talk-online-not-your-fathers-c-panel/
+
+- Compiled language: like having an instructor peering over your
+  shoulder!
+
+
+* A few words about Rcpp
+
+** Introduction by the primary author
+
+    http://dirk.eddelbuettel.com/code/rcpp.html
+
+In brief:
+
+#+BEGIN_QUOTE
+
+ The Rcpp package provides C++ classes that greatly facilitate
+ interfacing C or C++ code in R packages using the .Call() interface
+ provided by R. 
+
+#+END_QUOTE
+
+Most of this presentation consists of examples from class notes from a
+class given by Dirk Eddelbuetel and Romain Francois.
+
+** Caveat
+
+Rcpp is a moving target, and much of the documentation that is "in the
+wild" does *not* represent the current state of the software.
+
+** Why use Rcpp?
+
+- It is often faster than native R
+- It expands the scope of libraries and tools available to R
+
+
+* Some examples
+
+** A first example: speed
+
+#+BEGIN_SRC R :session *R* :results output :cache yes :exports both
+  
+  ## cf http://dirk.eddelbuettel.com/blog/2010/09/07#straight_curly_or_compiled
+  
+  ## Xian's code, using <- for assignments and passing x down
+  f <- function(n, x=1) for (i in 1:n) x=1/(1+x)
+  g <- function(n, x=1) for (i in 1:n) x=(1/(1+x))
+  h <- function(n, x=1) for (i in 1:n) x=(1+x)^(-1)
+  j <- function(n, x=1) for (i in 1:n) x={1/{1+x}}
+  k <- function(n, x=1) for (i in 1:n) x=1/{1+x}
+  
+  ## R 2.13.0 brings this toy
+  library(compiler)
+  lf <- cmpfun(f)
+  lg <- cmpfun(g)
+  lh <- cmpfun(h)
+  lj <- cmpfun(j)
+  lk <- cmpfun(k)
+  
+  ## now load some tools
+  library(rbenchmark)
+  
+  N <- 1e6
+  
+  ## now with Rcpp and C++
+  library(inline)
+  
+  ## and define our version in C++
+  src <- 'int n = as<int>(ns);
+          double x = as<double>(xs);
+          for (int i=0; i<n; i++) x=1/(1+x);
+          return wrap(x); '
+  l <- cxxfunction(signature(ns="integer",
+                             xs="numeric"),
+                   body=src, plugin="Rcpp")
+  
+  ## now run the benchmark
+  print(benchmark(f(N,1), g(N,1), h(N,1), j(N,1), k(N,1),
+            l(N,1),
+            lf(N,1), lg(N,1), lh(N,1), lj(N,1), lk(N,1),
+            columns=c("test", "replications",
+            "elapsed", "relative"),
+            order="relative", replications=10))
+  
+  
+#+END_SRC
+
+
+** RInside: the other way around
+
+Rcpp includes a related R package, /RInside/, which makes it possible
+to embed R in C++ applications.
+
+*** RInside: the "hello world" example
+
+It's complicated to include the appropriate libraries, but RInside
+comes with a helpful Makefile.  On my system it is located in:
+
+#+BEGIN_EXAMPLE
+  /usr/lib64/R/library/RInside/examples/standard/Makefile
+#+END_EXAMPLE
+
+We want to "tangle" the following source-code block, but we need to
+preserve the leading tab characters in order to keep "make" happy:
+
+#+BEGIN_SRC emacs-lisp
+
+(setq org-src-preserve-indentation t)
+
+#+END_SRC
+
+Here's the Makefile:
+
+#+BEGIN_SRC sh :tangle Makefile.demo
+
+## -*- mode: make; tab-width: 8; -*-
+##
+## Simple Makefile
+##
+## TODO: 
+##  proper configure for non-Debian file locations,   [ Done ]
+##  allow RHOME to be set for non-default R etc
+
+## comment this out if you need a different version of R, 
+## and set set R_HOME accordingly as an environment variable
+
+R_HOME := 		$(shell R RHOME)
+
+sources := 		$(wildcard *.cpp)
+programs := 		$(sources:.cpp=)
+
+
+## include headers and libraries for R 
+RCPPFLAGS := 		$(shell $(R_HOME)/bin/R CMD config --cppflags)
+RLDFLAGS := 		$(shell $(R_HOME)/bin/R CMD config --ldflags)
+RBLAS := 		$(shell $(R_HOME)/bin/R CMD config BLAS_LIBS)
+RLAPACK := 		$(shell $(R_HOME)/bin/R CMD config LAPACK_LIBS)
+
+## if you need to set an rpath to R itself, also uncomment
+#RRPATH :=		-Wl,-rpath,$(R_HOME)/lib
+
+## include headers and libraries for Rcpp interface classes
+RCPPINCL := 		$(shell echo 'Rcpp:::CxxFlags()' | $(R_HOME)/bin/R --vanilla --slave)
+RCPPLIBS := 		$(shell echo 'Rcpp:::LdFlags()'  | $(R_HOME)/bin/R --vanilla --slave)
+
+
+## include headers and libraries for RInside embedding classes
+RINSIDEINCL := 		$(shell echo 'RInside:::CxxFlags()' | $(R_HOME)/bin/R --vanilla --slave)
+RINSIDELIBS := 		$(shell echo 'RInside:::LdFlags()'  | $(R_HOME)/bin/R --vanilla --slave)
+
+## compiler etc settings used in default make rules
+CXX := 			$(shell $(R_HOME)/bin/R CMD config CXX)
+CPPFLAGS := 		-Wall $(shell $(R_HOME)/bin/R CMD config CPPFLAGS)
+CXXFLAGS := 		$(RCPPFLAGS) $(RCPPINCL) $(RINSIDEINCL) $(shell $(R_HOME)/bin/R CMD config CXXFLAGS)
+LDLIBS := 		$(RLDFLAGS) $(RRPATH) $(RBLAS) $(RLAPACK) $(RCPPLIBS) $(RINSIDELIBS)
+
+all: 			$(programs)
+			@test -x /usr/bin/strip && strip $^
+
+run:			$(programs)
+			@for p in $(programs); do echo; echo "Running $$p:"; ./$$p; done
+
+clean:
+			rm -vf $(programs)
+			rm -vrf *.dSYM
+
+runAll:
+			for p in $(programs); do echo "Running $$p"; ./$$p; done
+ 
+  
+#+END_SRC
+
+
+Here's the C++ code for the "hello world" program:
+
+#+BEGIN_SRC cpp :results output :tangle RI-hw.cpp
+  
+  #include <RInside.h>              // embedded R via RInside
+  
+  int main(int argc, char *argv[]) {
+  
+      RInside R(argc, argv);        // create embedded R inst.
+  
+      R["txt"] = "Hello, world!\n"; // assign  to 'txt' in R
+  
+      R.parseEvalQ("cat(txt)");     // eval string, ignore result
+  
+      exit(0);
+  }
+  
+#+END_SRC
+
+#+BEGIN_SRC sh :results output
+
+make -f Makefile.demo
+./RI-hw
+
+#+END_SRC
+
+*** RInside: use of R graphics in C++
+
+#+BEGIN_SRC cpp :tangle RI-graphics.cpp :exports none
+
+// Simple example motivated by post from Paul Smith <phhs80@gmail.com>
+// to r-help on 06 Mar 2011
+//
+// Copyright (C) 2011  Dirk Eddelbuettel and Romain Francois
+
+#include <RInside.h>                    // for the embedded R via RInside
+
+int main(int argc, char *argv[]) {
+
+  // create an embedded R instance
+  RInside R(argc, argv);               
+
+  // evaluate an R expression with curve() 
+  // because RInside defaults to interactive=false we use a file
+  // std::string cmd = "tmpf <- tempfile('curve'); " 
+  std::string cmd = "tmpf <- 'RIgraphics.png'; "
+    "png(tmpf); "
+    "curve(x^2, -10, 10, 200); "
+    "dev.off();"
+    "tmpf";
+  // by running parseEval, we get the last assignment back, here the filename
+  std::string tmpfile = R.parseEval(cmd);
+
+  std::cout << "Could now use plot in " << tmpfile << std::endl;
+  // unlink(tmpfile.c_str());		// cleaning up
+
+  // alternatively, by forcing a display we can plot to screen
+  cmd = "x11(); curve(x^2, -10, 10, 200); Sys.sleep(10);";
+  // parseEvalQ evluates without assignment
+  R.parseEvalQ(cmd);
+    
+  exit(0);
+}
+
+
+
+#+END_SRC
+
+#+BEGIN_SRC sh :results output graphics :exports results
+
+make -f Makefile.demo
+./RI-graphics
+
+#+END_SRC
+
+
+** Product of integer vector with C++ loop
+
+#+BEGIN_SRC R :results output :session *R* :exports both
+  
+  library(inline)
+  
+  src <- '
+      Rcpp::IntegerVector vec(vx);
+      int prod = 1;
+      for (int i=0; i<vec.size(); i++) {
+          prod *= vec[i];
+      }
+      return Rcpp::wrap(prod);
+  '
+  funLoop <- cxxfunction(signature(vx="integer"),
+                     src, plugin="Rcpp")
+  funLoop(1L:10L)
+  
+    
+  ## Can also use a sort of "vectorized" approach
+
+  src <- '
+    Rcpp::IntegerVector vec(vx);
+    int prod = std::accumulate(vec.begin(), vec.end(),
+                               1, std::multiplies<int>());
+    return Rcpp::wrap(prod);
+  '
+  funVec <- cxxfunction(signature(vx="integer"),
+                     src, plugin="Rcpp")
+  funVec(1L:10L)
+  
+
+  ## But there's not much (or any) performance advantage
+  ###### This needs work ###################################
+
+  library(rbenchmark)
+  
+  print(benchmark(funLoop(1L:1000L), funVec(1L:1000L),
+            columns=c("test",    "replications",
+                      "elapsed", "relative"),
+            order=c("replications", "elapsed"), replications=10^(1:5)))
+
+
+
+#+END_SRC
+
+
+* A peek under the hood
+
+#+BEGIN_QUOTE
+
+The RObject class is the basic class behind the new API.
+
+It is a thin wrapper around a SEXP object.  This is often called a
+proxy model as we do not copy the R object.
+
+RObject manages the life cycle, the object is protected from
+garbage collection while in scope -- so you do not have to do
+memory management.
+
+-- Dirk Eddelbuettel
+
+
+#+END_QUOTE
+
+
+
+* Some words about constructors
+
+** Nasty example: "remember to clone"
+
+What is the difference between the two invocations of "fun" below?
+
+#+BEGIN_SRC R :results output :session *R* :exports both
+
+library(inline)
+
+src <- '
+  NumericVector x1(xs); ////////////////////////////////
+  NumericVector x2(Rcpp::clone(xs));
+  IntegerVector x3(Rcpp::clone(xs));
+  IntegerVector x4(xs); ////////////////////////////////
+  x1[0] = 22;
+  x2[1] = 44;
+  x3[2] = 66;
+  x4[0] = 88;
+  return(DataFrame::create(Named("orig", xs),
+                           Named("x1", x1),
+                           Named("x2", x2),
+                           Named("x3", x3),
+                           Named("x4", x4)));'
+fun <- cxxfunction(signature(xs="numeric"),
+                   body=src, plugin="Rcpp")
+fun(seq(1.0, 3.0, by=1.0))
+fun(1L:3L)
+
+
+#+END_SRC
+
+
+
+In the first case, R is invoking "fun" with a vector of three real
+numbers.  Therefore:
+
+  - x1 is type-compatible with the input, xs, and *no* new vector is
+    created
+
+  - x2 and x3 are explicitly cloned, so new vectors *are* created for
+    both
+
+  - x4 is *not* type-compatible with the input, so a new vector is
+    created
+
+
+Hence, x1 is identical with xs, and when x1 gets changed (=x1[0] =
+22=), so does xs (aka "orig").
+
+In the second case, R is invoking "fun" with a vector of three
+integers.  Therefore:
+
+  - x1 is not type-compatible with the input, so a new vector is
+    created
+
+  - x2 and x3 are cloned, as before, so both are new vectors
+
+  - x4 now *is* type-compatible with the input, so no new vector is
+    created for it
+
+Hence, x4 is now identical with xs, and when x4 gets changed (=x4[0] =
+88=), so does xs (aka "orig")
+
+
+
+** Constructor overview
+
+SEXP x;
+NumericVector y( x ); // from a SEXP
+
+// cloning (deep copy)
+NumericVector z = clone<NumericVector>( y );
+
+// of a given size (all elements set to 0.0)
+NumericVector y( 10 );
+
+// ... specifying the value
+NumericVector y( 10, 2.0 );
+
+// ... with elements generated
+NumericVector y( 10, ::Rf_unif_rand );
+
+// with given elements
+NumericVector y = NumericVector::create( 1.0, 2.0 );
+
+
+* Matrices
+
+Matrices are vectors with a dimension attribute.
+
+** Simple matrix example
+
+Note the use of an "apply-like" C++ function here.
+
+#+BEGIN_SRC R :results output :exports both :session *R*
+
+library(inline)
+
+src <- '
+  Rcpp::NumericMatrix mat = Rcpp::NumericMatrix(mx);
+  std::transform(mat.begin(), mat.end(),
+                 mat.begin(), ::sqrt);
+  return mat; '
+fun <- cxxfunction(signature(mx="numeric"), src,
+                   plugin="Rcpp")
+mat <- matrix(c(1, 4, 9, 16, 25, 36, 49, 64, 81), 3, 3)
+fun(mat)
+
+#+END_SRC
+
+** RcppArmadillo
+
+"Armadillo" is an open-source linear-algebra library for C++:
+
+    http://arma.sourceforge.net/
+
+The RcppArmadillo package makes it easy to use Armadillo in Rcpp.
+
+#+BEGIN_SRC R :results output :session *R* :exports both
+
+  library(inline)
+  
+  src <- '
+    arma::mat m1 = Rcpp::as<arma::mat>(mx);
+    arma::mat m2 = m1 + m1;
+    arma::mat m3 = m1 * 3;
+    return Rcpp::List::create(m1, m2, m3); '
+  fun <- cxxfunction(signature(mx="numeric"), src,
+                     plugin="RcppArmadillo")
+  mat <- matrix(1:9, 3, 3)
+  mat2 <- fun(mat)
+  print(mat2)
+
+#+END_SRC
+
+
+Note, by the way, that some people prefer the "Eigen" package for this
+kind of thing:
+
+#+BEGIN_EXAMPLE
+
+                Information on package ‘RcppEigen’
+
+Description:
+
+Package:            RcppEigen
+Type:               Package
+Title:              Rcpp integration for the Eigen templated linear
+                    algebra library.
+
+#+END_EXAMPLE
+
+** More fun with Armadillo: eigenvalues
+
+
+#+BEGIN_SRC R :results output :session *R* :exports both
+
+  library(inline)
+  
+  src <- '
+    arma::mat m1 = Rcpp::as<arma::mat>(mx);
+    arma::vec eigval;
+    arma::mat eigvec;
+
+    eig_sym(eigval, eigvec, m1);
+
+    return Rcpp::List::create(m1, eigval, eigvec); '
+  fun <- cxxfunction(signature(mx="numeric"), src,
+                     plugin="RcppArmadillo")
+
+
+  mat <- matrix (rbind(c(3, 2, 4),
+                       c(2, 0, 2),
+                       c(4, 2, 3)), nrow=3, ncol=3)
+
+  print(fun(mat))
+
+
+#+END_SRC
+
+
+* Many other data types in Rcpp
+
+** GenericVector (List)
+
+We had an example above, in the discussion of eigenvalues.
+
+
+** DataFrame
+
+We had an example above in the discussion of cloning.
+
+
+** Function
+
+*** Example: grabbing a function from R
+
+This example merely illustrates the use of Rcpp to link to a function
+in R.  All we do is grab the function, apply it to some vectors
+created in C++, and then return the output of the function to R.  We
+would have gotten the same result had we defined the vectors in R and
+invoked the same function directly in R.
+
+But in a real use case, we would have proceeded to do further
+calculations inside the C++ code.
+
+#+BEGIN_SRC R :session *R* :results output :exports both
+   
+  library(inline)
+  src <- '
+    Rcpp::Function expGrid("expand.grid");
+    IntegerVector v1;
+    IntegerVector v2;
+
+    v1.push_back(1);
+    v1.push_back(3);
+    v1.push_back(5);
+
+    v2.push_back(2);
+    v2.push_back(4);
+    v2.push_back(6);
+
+    return(expGrid(v1, v2));'
+  
+    fun <- cxxfunction(signature(),
+                       src,
+                       plugin="Rcpp")
+    print(fun())
+  
+  
+  
+#+END_SRC
+
+
+*** Example: passing functions from R to C++
+
+Note the third invocation of "fun".  In the C++ code the function is
+named "sort", but that name is, in effect, a dummy variable.
+
+#+BEGIN_SRC R :session *R* :results output :exports both
+  
+  library(inline)
+
+  src <- '
+    Function sort(x) ;
+    return sort( y, Named("decreasing", true));'
+  fun <- cxxfunction(signature(x="function",
+                               y="ANY"),
+                      src, plugin="Rcpp", verbose=FALSE)
+  fun(sort, sample(1:5, 10, TRUE))
+  fun(sort, sample(LETTERS[1:5], 10, TRUE))
+  fun(mean, sample(1:100, 10, TRUE))
+  
+  
+#+END_SRC
+
+
+** Environment
+
+The Environment class allows us to access R environments.  It provides
+an alternative way of accessing functions from R.
+
+#+BEGIN_SRC R :session *R* :results output :exports both
+  
+  library(inline)
+  
+  src <- '
+      Rcpp::Environment stats("package:stats");
+      Rcpp::Function rnorm = stats["rnorm"];
+      return rnorm(10, Rcpp::Named("sd", 100.0));
+  '
+  
+  fun <- cxxfunction(signature(),
+                     src, plugin="Rcpp")
+  fun()
+  
+#+END_SRC
+
+
+** S4 classes
+
+S4 classes can also be created or altered at the C++ level.  Example
+omitted.
+
+
+
+* Creating a package with Rcpp
+
+R provides a function, =package.skeleton()=, to help create R
+packages.
+
+Eddelbuettel/Francois have wrapped and extended this function to
+=Rcpp.package.skeleton()= to help create R packages that involve Rcpp.
+
+** Making the skeleton
+
+#+BEGIN_SRC R :session *R* :results output append :exports both
+  
+  library(Rcpp)
+  if (!file.exists("./UCDpackage")) {
+      Rcpp.package.skeleton( "UCDpackage" )
+  }
+  
+#+END_SRC
+
+
+** A look at the file structure of the skeleton package
+
+#+BEGIN_SRC sh :results output :exports both
+  
+  tree UCDpackage
+  
+#+END_SRC
+
+
+** The C++ header file
+
+#+BEGIN_SRC sh :results output :exports both
+  
+  cat ./UCDpackage/src/rcpp_hello_world.h
+  
+#+END_SRC
+
+
+** The C++ source file
+
+#+BEGIN_SRC sh :results output :exports both
+  
+  cat ./UCDpackage/src/rcpp_hello_world.cpp
+  
+#+END_SRC
+
+
+** The R file
+
+#+BEGIN_SRC sh :results output :exports both
+  
+  cat ./UCDpackage/R/rcpp_hello_world.R
+  
+#+END_SRC
+
+
+** The DESCRIPTION file
+
+Note the last two lines, which declare the dependency of your package
+on Rcpp.
+
+#+BEGIN_SRC sh :results output :exports both
+  
+  cat ./UCDpackage/DESCRIPTION
+  
+#+END_SRC
+
+
+** The NAMESPACE file
+
+The regular expression exports all symbols.
+
+#+BEGIN_SRC sh :results output :exports both
+  
+  cat ./UCDpackage/NAMESPACE
+  
+#+END_SRC
+
+
+** The standard Makevars file
+
+#+BEGIN_SRC sh :results output :exports both
+  
+  cat ./UCDpackage/src/Makevars
+  
+#+END_SRC
+
+
+** The Windows Makevars.win file
+
+#+BEGIN_SRC sh :results output :exports both
+  
+  cat ./UCDpackage/src/Makevars.win
+  
+#+END_SRC
+
+
+** Installation
+
+Something in my .Rprofile was causing a problem.
+
+#+BEGIN_SRC sh :results output :exports both
+  
+  mv ~/.Rprofile ~/.Rprofile.save
+  R CMD INSTALL -l ~/R/library UCDpackage
+  mv ~/.Rprofile.save ~/.Rprofile  
+
+#+END_SRC
+
+
+** Use of the package
+
+#+BEGIN_SRC R :results output :session *R* :exports both
+  
+  library("UCDpackage", lib.loc="~/R/library")
+  rcpp_hello_world()
+  
+#+END_SRC
+
+
+* Syntactic sugar
+
+#+BEGIN_QUOTE
+
+Put succinctly, the motivation of Rcpp sugar is to bring a subset of
+the high-level R syntax in C++.
+
+-- Dirk Eddelbuettel and Romain Francois
+
+#+END_QUOTE
+
+See the PDF document in the vignette:
+
+#+BEGIN_EXAMPLE
+
+> vignette("Rcpp-sugar")
+
+#+END_EXAMPLE
+
+** A first sugar example: sapply
+
+To use an auxiliary function with the simple "inline" approach, the
+function, AFAICT, has to be defined in an include file.
+
+But, given the function, the syntax for sapply in C++  is now virtually
+identical to the syntax used in R.  (The "wrap" function is a part of
+Rcpp that transforms an arbitrary object into a symbolic expression,
+aka, SEXP -- i.e. something that R can understand.)
+
+#+BEGIN_SRC R :session *R* :results output :exports both
+  
+  library(inline)
+  includes <- '
+          double square( double x){
+            return x*x ;
+          }'
+  
+  src <- 'NumericVector x(xx);
+          return wrap(sapply( x, square ));'
+  
+  fun <- cxxfunction(signature(xx="numeric"),
+                     body=src,
+                     plugin="Rcpp",
+                     includes=includes)
+  
+  fun(c(1, 3, 5, 7, 9))
+  
+#+END_SRC
+
+
+** Sugar example with benchmark
+
+Note that the C++ syntax is very "R-like", but that there is a
+significant performance advantage to using Rcpp/C++.
+
+#+BEGIN_SRC R :session *R* :results output :exports both
+  
+  foo <- function(x) {
+  
+      ## sum of
+      ##  -- squares of negatives
+      ##  -- exponentials of positives
+      s <- sum(ifelse( x < 0,  x*x,  exp(x) ))
+  
+      return(s)
+  }
+  
+  
+  library(inline)
+  
+  cppfoo <- cxxfunction(signature(xs="numeric"),
+                     plugin="Rcpp", body='
+  
+     NumericVector x(xs);
+  
+     double s = sum( ifelse( x < 0, x*x, exp(x) ));
+  
+     return wrap(s);
+  ')
+  
+  library(compiler)
+  Rcmpfoo <- cmpfun(foo)
+  
+  library(rbenchmark)
+  x <- rnorm(1e5)
+  benchmark(foo(x), Rcmpfoo(x), cppfoo(x),
+            columns=c("test", "elapsed", "relative", "user.self", "sys.self"),
+            order="relative", replications=10)
+  
+  
+#+END_SRC
+
+
+

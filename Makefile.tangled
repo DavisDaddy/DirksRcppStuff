@@ -1,0 +1,5 @@
+
+hw:	hw.cpp
+	g++ -o hw hw.cpp
+
+  

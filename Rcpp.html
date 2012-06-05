@@ -1,0 +1,1668 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<title>Rcpp</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<meta name="title" content="Rcpp"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2012-06-04T16:33-0700"/>
+<meta name="author" content="Michael Hannon"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #add8e6; font-weight:normal }
+  .target { }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .right  {margin-left:auto; margin-right:0px;  text-align:right;}
+  .left   {margin-left:0px;  margin-right:auto; text-align:left;}
+  .center {margin-left:auto; margin-right:auto; text-align:center;}
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top;  }
+  th.right  { text-align:center;  }
+  th.left   { text-align:center;   }
+  th.center { text-align:center; }
+  td.right  { text-align:right;  }
+  td.left   { text-align:left;   }
+  td.center { text-align:center; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  div.inlinetask {
+    padding:10px;
+    border:2px solid gray;
+    margin:10px;
+    background: #ffffcc;
+  }
+  textarea { overflow-x: auto; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+
+</head>
+<body>
+
+<div id="preamble">
+
+</div>
+
+<div id="content">
+<h1 class="title">Rcpp</h1>
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 A few words about C++</a></li>
+<li><a href="#sec-2">2 A few words about Rcpp</a>
+<ul>
+<li><a href="#sec-2-1">2.1 Introduction by the primary author</a></li>
+<li><a href="#sec-2-2">2.2 Caveat</a></li>
+<li><a href="#sec-2-3">2.3 Why use Rcpp?</a></li>
+</ul>
+</li>
+<li><a href="#sec-3">3 Some examples</a>
+<ul>
+<li><a href="#sec-3-1">3.1 A first example: speed</a></li>
+<li><a href="#sec-3-2">3.2 RInside: the other way around</a>
+<ul>
+<li><a href="#sec-3-2-1">3.2.1 RInside: the "hello world" example</a></li>
+<li><a href="#sec-3-2-2">3.2.2 RInside: use of R graphics in C++</a></li>
+</ul>
+</li>
+<li><a href="#sec-3-3">3.3 Product of integer vector with C++ loop</a></li>
+</ul>
+</li>
+<li><a href="#sec-4">4 A peek under the hood</a></li>
+<li><a href="#sec-5">5 Some words about constructors</a>
+<ul>
+<li><a href="#sec-5-1">5.1 Nasty example: "remember to clone"</a></li>
+<li><a href="#sec-5-2">5.2 Constructor overview</a></li>
+</ul>
+</li>
+<li><a href="#sec-6">6 Matrices</a>
+<ul>
+<li><a href="#sec-6-1">6.1 Simple matrix example</a></li>
+<li><a href="#sec-6-2">6.2 RcppArmadillo</a></li>
+<li><a href="#sec-6-3">6.3 More fun with Armadillo: eigenvalues</a></li>
+</ul>
+</li>
+<li><a href="#sec-7">7 Many other data types in Rcpp</a>
+<ul>
+<li><a href="#sec-7-1">7.1 GenericVector (List)</a></li>
+<li><a href="#sec-7-2">7.2 DataFrame</a></li>
+<li><a href="#sec-7-3">7.3 Function</a>
+<ul>
+<li><a href="#sec-7-3-1">7.3.1 Example: grabbing a function from R</a></li>
+<li><a href="#sec-7-3-2">7.3.2 Example: passing functions from R to C++</a></li>
+</ul>
+</li>
+<li><a href="#sec-7-4">7.4 Environment</a></li>
+<li><a href="#sec-7-5">7.5 S4 classes</a></li>
+</ul>
+</li>
+<li><a href="#sec-8">8 Creating a package with Rcpp</a>
+<ul>
+<li><a href="#sec-8-1">8.1 Making the skeleton</a></li>
+<li><a href="#sec-8-2">8.2 A look at the file structure of the skeleton package</a></li>
+<li><a href="#sec-8-3">8.3 The C++ header file</a></li>
+<li><a href="#sec-8-4">8.4 The C++ source file</a></li>
+<li><a href="#sec-8-5">8.5 The R file</a></li>
+<li><a href="#sec-8-6">8.6 The DESCRIPTION file</a></li>
+<li><a href="#sec-8-7">8.7 The NAMESPACE file</a></li>
+<li><a href="#sec-8-8">8.8 The standard Makevars file</a></li>
+<li><a href="#sec-8-9">8.9 The Windows Makevars.win file</a></li>
+<li><a href="#sec-8-10">8.10 Installation</a></li>
+<li><a href="#sec-8-11">8.11 Use of the package</a></li>
+</ul>
+</li>
+<li><a href="#sec-9">9 Syntactic sugar</a>
+<ul>
+<li><a href="#sec-9-1">9.1 A first sugar example: sapply</a></li>
+<li><a href="#sec-9-2">9.2 Sugar example with benchmark</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> A few words about C++</h2>
+<div class="outline-text-2" id="text-1">
+
+
+<ul>
+<li>C++ is a statically typed, free-form, multi-paradigm, compiled,
+  general-purpose programming language (Wikipedia).
+
+</li>
+<li>Developed by Bjarne Stroustrup at Bell Labs, starting in late 1970's
+  as a sort of generalization of the C language (hence, the name).
+
+</li>
+<li>C++ today is a "federation of four languages" (Eddelbuettel).
+<ul>
+<li>Compiled rather than interpreted (like C, Fortran, etc.)
+</li>
+<li>OOP ("marries data with code")
+</li>
+<li>Generic programming (Standard Template Library)
+</li>
+<li>Template programming
+
+</li>
+</ul>
+
+</li>
+<li>Many recent developments:
+  <a href="http://herbsutter.com/2012/04/12/talk-online-not-your-fathers-c-panel/">http://herbsutter.com/2012/04/12/talk-online-not-your-fathers-c-panel/</a>
+
+</li>
+<li>Compiled language: like having an instructor peering over your
+  shoulder!
+</li>
+</ul>
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> A few words about Rcpp</h2>
+<div class="outline-text-2" id="text-2">
+
+
+
+</div>
+
+<div id="outline-container-2-1" class="outline-3">
+<h3 id="sec-2-1"><span class="section-number-3">2.1</span> Introduction by the primary author</h3>
+<div class="outline-text-3" id="text-2-1">
+
+
+<p>
+    <a href="http://dirk.eddelbuettel.com/code/rcpp.html">http://dirk.eddelbuettel.com/code/rcpp.html</a>
+</p>
+<p>
+In brief:
+</p>
+<blockquote>
+
+
+<p>
+The Rcpp package provides C++ classes that greatly facilitate
+interfacing C or C++ code in R packages using the .Call() interface
+provided by R. 
+</p>
+
+</blockquote>
+
+
+<p>
+Most of this presentation consists of examples from class notes from a
+class given by Dirk Eddelbuetel and Romain Francois.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-2-2" class="outline-3">
+<h3 id="sec-2-2"><span class="section-number-3">2.2</span> Caveat</h3>
+<div class="outline-text-3" id="text-2-2">
+
+
+<p>
+Rcpp is a moving target, and much of the documentation that is "in the
+wild" does <b>not</b> represent the current state of the software.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-2-3" class="outline-3">
+<h3 id="sec-2-3"><span class="section-number-3">2.3</span> Why use Rcpp?</h3>
+<div class="outline-text-3" id="text-2-3">
+
+
+<ul>
+<li>It is often faster than native R
+</li>
+<li>It expands the scope of libraries and tools available to R
+</li>
+</ul>
+
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Some examples</h2>
+<div class="outline-text-2" id="text-3">
+
+
+
+</div>
+
+<div id="outline-container-3-1" class="outline-3">
+<h3 id="sec-3-1"><span class="section-number-3">3.1</span> A first example: speed</h3>
+<div class="outline-text-3" id="text-3-1">
+
+
+
+
+
+<pre class="src src-R"><span style="color: #ffa500;">## </span><span style="color: #ffa500;">cf http://dirk.eddelbuettel.com/blog/2010/09/07#straight_curly_or_compiled</span>
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">Xian's code, using &lt;- for assignments and passing x down</span>
+<span style="color: #87cefa;">f</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=1/(1+x)
+<span style="color: #87cefa;">g</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=(1/(1+x))
+<span style="color: #87cefa;">h</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=(1+x)^(-1)
+<span style="color: #87cefa;">j</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x={1/{1+x}}
+<span style="color: #87cefa;">k</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(n, x=1) <span style="color: #00ffff;">for</span> (i <span style="color: #00ffff;">in</span> 1:n) x=1/{1+x}
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">R 2.13.0 brings this toy</span>
+<span style="color: #7fffd4;">library</span>(compiler)
+lf <span style="color: #7fffd4;">&lt;-</span> cmpfun(f)
+lg <span style="color: #7fffd4;">&lt;-</span> cmpfun(g)
+lh <span style="color: #7fffd4;">&lt;-</span> cmpfun(h)
+lj <span style="color: #7fffd4;">&lt;-</span> cmpfun(j)
+lk <span style="color: #7fffd4;">&lt;-</span> cmpfun(k)
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">now load some tools</span>
+<span style="color: #7fffd4;">library</span>(rbenchmark)
+
+N <span style="color: #7fffd4;">&lt;-</span> 1e6
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">now with Rcpp and C++</span>
+<span style="color: #7fffd4;">library</span>(inline)
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">and define our version in C++</span>
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'int n = as&lt;int&gt;(ns);</span>
+<span style="color: #ffa07a;">        double x = as&lt;double&gt;(xs);</span>
+<span style="color: #ffa07a;">        for (int i=0; i&lt;n; i++) x=1/(1+x);</span>
+<span style="color: #ffa07a;">        return wrap(x); '</span>
+l <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(ns=<span style="color: #ffa07a;">"integer"</span>,
+                           xs=<span style="color: #ffa07a;">"numeric"</span>),
+                 body=src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">now run the benchmark</span>
+print(benchmark(f(N,1), g(N,1), h(N,1), j(N,1), k(N,1),
+          l(N,1),
+          lf(N,1), lg(N,1), lh(N,1), lj(N,1), lk(N,1),
+          columns=c(<span style="color: #ffa07a;">"test"</span>, <span style="color: #ffa07a;">"replications"</span>,
+          <span style="color: #ffa07a;">"elapsed"</span>, <span style="color: #ffa07a;">"relative"</span>),
+          order=<span style="color: #ffa07a;">"relative"</span>, replications=10))
+
+
+</pre>
+
+
+
+<pre class="example">       test replications elapsed  relative
+6   l(N, 1)           10   0.115   1.00000
+8  lg(N, 1)           10   3.494  30.38261
+10 lj(N, 1)           10   3.647  31.71304
+7  lf(N, 1)           10   3.667  31.88696
+11 lk(N, 1)           10   3.667  31.88696
+9  lh(N, 1)           10   4.529  39.38261
+5   k(N, 1)           10  14.382 125.06087
+1   f(N, 1)           10  14.821 128.87826
+4   j(N, 1)           10  16.281 141.57391
+2   g(N, 1)           10  16.824 146.29565
+3   h(N, 1)           10  21.195 184.30435
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3-2" class="outline-3">
+<h3 id="sec-3-2"><span class="section-number-3">3.2</span> RInside: the other way around</h3>
+<div class="outline-text-3" id="text-3-2">
+
+
+<p>
+Rcpp includes a related R package, <i>RInside</i>, which makes it possible
+to embed R in C++ applications.
+</p>
+
+</div>
+
+<div id="outline-container-3-2-1" class="outline-4">
+<h4 id="sec-3-2-1"><span class="section-number-4">3.2.1</span> RInside: the "hello world" example</h4>
+<div class="outline-text-4" id="text-3-2-1">
+
+
+<p>
+It's complicated to include the appropriate libraries, but RInside
+comes with a helpful Makefile.  On my system it is located in:
+</p>
+
+
+
+<pre class="example">/usr/lib64/R/library/RInside/examples/standard/Makefile
+</pre>
+
+
+<p>
+We want to "tangle" the following source-code block, but we need to
+preserve the leading tab characters in order to keep "make" happy:
+</p>
+
+
+
+<pre class="src src-emacs-lisp">(setq org-src-preserve-indentation t)
+
+</pre>
+
+
+<p>
+Here's the Makefile:
+</p>
+
+
+
+<pre class="src src-sh"><span style="color: #ffa500;">## </span><span style="color: #ffa500;">-*- mode: make; tab-width: 8; -*-</span>
+<span style="color: #ffa500;">##</span>
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">Simple Makefile</span>
+<span style="color: #ffa500;">##</span>
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">TODO: </span>
+<span style="color: #ffa500;">##  </span><span style="color: #ffa500;">proper configure for non-Debian file locations,   [ Done ]</span>
+<span style="color: #ffa500;">##  </span><span style="color: #ffa500;">allow RHOME to be set for non-default R etc</span>
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">comment this out if you need a different version of R, </span>
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">and set set R_HOME accordingly as an environment variable</span>
+
+R_HOME :=               $(<span style="color: #fa8072;">shell</span> R RHOME)
+
+sources :=              $(<span style="color: #fa8072;">wildcard</span> *.cpp)
+programs :=             $(<span style="color: #fa8072;">sources</span>:.cpp=)
+
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">include headers and libraries for R </span>
+RCPPFLAGS :=            $(<span style="color: #fa8072;">shell</span> $(<span style="color: #fa8072;">R_HOME</span>)/bin/R CMD config --cppflags)
+RLDFLAGS :=             $(<span style="color: #fa8072;">shell</span> $(<span style="color: #fa8072;">R_HOME</span>)/bin/R CMD config --ldflags)
+RBLAS :=                $(<span style="color: #fa8072;">shell</span> $(<span style="color: #fa8072;">R_HOME</span>)/bin/R CMD config BLAS_LIBS)
+RLAPACK :=              $(<span style="color: #fa8072;">shell</span> $(<span style="color: #fa8072;">R_HOME</span>)/bin/R CMD config LAPACK_LIBS)
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">if you need to set an rpath to R itself, also uncomment</span>
+<span style="color: #ffa500;">#</span><span style="color: #ffa500;">RRPATH :=              -Wl,-rpath,$(</span><span style="color: #fa8072;">R_HOME</span><span style="color: #ffa500;">)/lib</span>
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">include headers and libraries for Rcpp interface classes</span>
+RCPPINCL :=             $(<span style="color: #fa8072;">shell</span> echo <span style="color: #ffa07a;">'Rcpp:::CxxFlags()'</span> | $(<span style="color: #fa8072;">R_HOME</span>)/bin/R --vanilla --slave)
+RCPPLIBS :=             $(<span style="color: #fa8072;">shell</span> echo <span style="color: #ffa07a;">'Rcpp:::LdFlags()'</span>  | $(<span style="color: #fa8072;">R_HOME</span>)/bin/R --vanilla --slave)
+
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">include headers and libraries for RInside embedding classes</span>
+RINSIDEINCL :=          $(<span style="color: #fa8072;">shell</span> echo <span style="color: #ffa07a;">'RInside:::CxxFlags()'</span> | $(<span style="color: #fa8072;">R_HOME</span>)/bin/R --vanilla --slave)
+RINSIDELIBS :=          $(<span style="color: #fa8072;">shell</span> echo <span style="color: #ffa07a;">'RInside:::LdFlags()'</span>  | $(<span style="color: #fa8072;">R_HOME</span>)/bin/R --vanilla --slave)
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">compiler etc settings used in default make rules</span>
+CXX :=                  $(<span style="color: #fa8072;">shell</span> $(<span style="color: #fa8072;">R_HOME</span>)/bin/R CMD config CXX)
+CPPFLAGS :=             -Wall $(<span style="color: #fa8072;">shell</span> $(<span style="color: #fa8072;">R_HOME</span>)/bin/R CMD config CPPFLAGS)
+CXXFLAGS :=             $(<span style="color: #fa8072;">RCPPFLAGS</span>) $(<span style="color: #fa8072;">RCPPINCL</span>) $(<span style="color: #fa8072;">RINSIDEINCL</span>) $(<span style="color: #fa8072;">shell</span> $(<span style="color: #fa8072;">R_HOME</span>)/bin/R CMD config CXXFLAGS)
+LDLIBS :=               $(<span style="color: #fa8072;">RLDFLAGS</span>) $(<span style="color: #fa8072;">RRPATH</span>) $(<span style="color: #fa8072;">RBLAS</span>) $(<span style="color: #fa8072;">RLAPACK</span>) $(<span style="color: #fa8072;">RCPPLIBS</span>) $(<span style="color: #fa8072;">RINSIDELIBS</span>)
+
+all:                    $(<span style="color: #fa8072;">programs</span>)
+                        @test -x /usr/bin/strip &amp;&amp; strip $^
+
+run:                    $(<span style="color: #fa8072;">programs</span>)
+                        @for p<span style="color: #00ffff;"> in</span> $(<span style="color: #fa8072;">programs</span>); <span style="color: #00ffff;">do </span><span style="color: #b0c4de;">echo</span>; <span style="color: #b0c4de;">echo</span> <span style="color: #ffa07a;">"Running $$p:"</span>; ./$<span style="color: #eedd82;">$</span>p; <span style="color: #00ffff;">done</span>
+
+clean:
+                        rm -vf $(<span style="color: #fa8072;">programs</span>)
+                        rm -vrf *.dSYM
+
+runAll:
+                        <span style="color: #00ffff;">for</span> p<span style="color: #00ffff;"> in</span> $(<span style="color: #fa8072;">programs</span>); <span style="color: #00ffff;">do </span><span style="color: #b0c4de;">echo</span> <span style="color: #ffa07a;">"Running $$p"</span>; ./$<span style="color: #eedd82;">$</span>p; <span style="color: #00ffff;">done</span>
+
+
+</pre>
+
+
+
+<p>
+Here's the C++ code for the "hello world" program:
+</p>
+
+
+
+<pre class="src src-cpp"><span style="color: #b0c4de;">#include</span> <span style="color: #ffa07a;">&lt;RInside.h&gt;</span>              <span style="color: #ffa500;">// </span><span style="color: #ffa500;">embedded R via RInside</span>
+
+<span style="color: #98fb98;">int</span> <span style="color: #87cefa;">main</span>(<span style="color: #98fb98;">int</span> <span style="color: #eedd82;">argc</span>, <span style="color: #98fb98;">char</span> *<span style="color: #eedd82;">argv</span>[]) {
+
+    <span style="color: #98fb98;">RInside</span> <span style="color: #eedd82;">R</span>(argc, argv);        <span style="color: #ffa500;">// </span><span style="color: #ffa500;">create embedded R inst.</span>
+
+    R[<span style="color: #ffa07a;">"txt"</span>] = <span style="color: #ffa07a;">"Hello, world!\n"</span>; <span style="color: #ffa500;">// </span><span style="color: #ffa500;">assign  to 'txt' in R</span>
+
+    R.parseEvalQ(<span style="color: #ffa07a;">"cat(txt)"</span>);     <span style="color: #ffa500;">// </span><span style="color: #ffa500;">eval string, ignore result</span>
+
+    exit(0);
+}
+
+</pre>
+
+
+
+<pre class="src src-sh">make -f Makefile.demo
+./RI-hw
+
+</pre>
+
+
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3-2-2" class="outline-4">
+<h4 id="sec-3-2-2"><span class="section-number-4">3.2.2</span> RInside: use of R graphics in C++</h4>
+<div class="outline-text-4" id="text-3-2-2">
+
+
+
+
+
+
+<pre class="example">
+Starting R at:
+[1] "2012-06-04 16:32:41 PDT"
+Could now use plot in RIgraphics.png
+</pre>
+
+
+
+<p>
+<img src="./RIgraphics.png"  alt="./RIgraphics.png" />
+</p>
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3-3" class="outline-3">
+<h3 id="sec-3-3"><span class="section-number-3">3.3</span> Product of integer vector with C++ loop</h3>
+<div class="outline-text-3" id="text-3-3">
+
+
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">    Rcpp::IntegerVector vec(vx);</span>
+<span style="color: #ffa07a;">    int prod = 1;</span>
+<span style="color: #ffa07a;">    for (int i=0; i&lt;vec.size(); i++) {</span>
+<span style="color: #ffa07a;">        prod *= vec[i];</span>
+<span style="color: #ffa07a;">    }</span>
+<span style="color: #ffa07a;">    return Rcpp::wrap(prod);</span>
+<span style="color: #ffa07a;">'</span>
+funLoop <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(vx=<span style="color: #ffa07a;">"integer"</span>),
+                   src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+funLoop(1L:10L)
+
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">Can also use a sort of "vectorized" approach</span>
+
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">  Rcpp::IntegerVector vec(vx);</span>
+<span style="color: #ffa07a;">  int prod = std::accumulate(vec.begin(), vec.end(),</span>
+<span style="color: #ffa07a;">                             1, std::multiplies&lt;int&gt;());</span>
+<span style="color: #ffa07a;">  return Rcpp::wrap(prod);</span>
+<span style="color: #ffa07a;">'</span>
+funVec <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(vx=<span style="color: #ffa07a;">"integer"</span>),
+                   src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+funVec(1L:10L)
+
+
+<span style="color: #ffa500;">## </span><span style="color: #ffa500;">But there's not much (or any) performance advantage</span>
+<span style="color: #ffa500;">###### </span><span style="color: #ffa500;">This needs work ###################################</span>
+
+<span style="color: #7fffd4;">library</span>(rbenchmark)
+
+print(benchmark(funLoop(1L:1000L), funVec(1L:1000L),
+          columns=c(<span style="color: #ffa07a;">"test"</span>,    <span style="color: #ffa07a;">"replications"</span>,
+                    <span style="color: #ffa07a;">"elapsed"</span>, <span style="color: #ffa07a;">"relative"</span>),
+          order=c(<span style="color: #ffa07a;">"replications"</span>, <span style="color: #ffa07a;">"elapsed"</span>), replications=10^(1:5)))
+
+
+
+</pre>
+
+
+
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> A peek under the hood</h2>
+<div class="outline-text-2" id="text-4">
+
+
+<blockquote>
+
+
+<p>
+The RObject class is the basic class behind the new API.
+</p>
+<p>
+It is a thin wrapper around a SEXP object.  This is often called a
+proxy model as we do not copy the R object.
+</p>
+<p>
+RObject manages the life cycle, the object is protected from
+garbage collection while in scope &ndash; so you do not have to do
+memory management.
+</p>
+<p>
+&ndash; Dirk Eddelbuettel
+</p>
+
+
+</blockquote>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> Some words about constructors</h2>
+<div class="outline-text-2" id="text-5">
+
+
+
+</div>
+
+<div id="outline-container-5-1" class="outline-3">
+<h3 id="sec-5-1"><span class="section-number-3">5.1</span> Nasty example: "remember to clone"</h3>
+<div class="outline-text-3" id="text-5-1">
+
+
+<p>
+What is the difference between the two invocations of "fun" below?
+</p>
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">  NumericVector x1(xs); ////////////////////////////////</span>
+<span style="color: #ffa07a;">  NumericVector x2(Rcpp::clone(xs));</span>
+<span style="color: #ffa07a;">  IntegerVector x3(Rcpp::clone(xs));</span>
+<span style="color: #ffa07a;">  IntegerVector x4(xs); ////////////////////////////////</span>
+<span style="color: #ffa07a;">  x1[0] = 22;</span>
+<span style="color: #ffa07a;">  x2[1] = 44;</span>
+<span style="color: #ffa07a;">  x3[2] = 66;</span>
+<span style="color: #ffa07a;">  x4[0] = 88;</span>
+<span style="color: #ffa07a;">  return(DataFrame::create(Named("orig", xs),</span>
+<span style="color: #ffa07a;">                           Named("x1", x1),</span>
+<span style="color: #ffa07a;">                           Named("x2", x2),</span>
+<span style="color: #ffa07a;">                           Named("x3", x3),</span>
+<span style="color: #ffa07a;">                           Named("x4", x4)));'</span>
+fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(xs=<span style="color: #ffa07a;">"numeric"</span>),
+                   body=src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+fun(seq(1.0, 3.0, by=1.0))
+fun(1L:3L)
+
+
+</pre>
+
+
+<pre class="example">
+  orig x1 x2 x3 x4
+1   22 22  1  1 88
+2    2  2 44  2  2
+3    3  3  3 66  3
+  orig x1 x2 x3 x4
+1   88 22  1  1 88
+2    2  2 44  2  2
+3    3  3  3 66  3
+</pre>
+
+
+<p>
+In the first case, R is invoking "fun" with a vector of three real
+numbers.  Therefore:
+</p>
+<ul>
+<li>x1 is type-compatible with the input, xs, and <b>no</b> new vector is
+    created
+
+</li>
+<li>x2 and x3 are explicitly cloned, so new vectors <b>are</b> created for
+    both
+
+</li>
+<li>x4 is <b>not</b> type-compatible with the input, so a new vector is
+    created
+</li>
+</ul>
+
+
+
+<p>
+Hence, x1 is identical with xs, and when x1 gets changed (<code>x1[0] = 22</code>), so does xs (aka "orig").
+</p>
+<p>
+In the second case, R is invoking "fun" with a vector of three
+integers.  Therefore:
+</p>
+<ul>
+<li>x1 is not type-compatible with the input, so a new vector is
+    created
+
+</li>
+<li>x2 and x3 are cloned, as before, so both are new vectors
+
+</li>
+<li>x4 now <b>is</b> type-compatible with the input, so no new vector is
+    created for it
+</li>
+</ul>
+
+
+<p>
+Hence, x4 is now identical with xs, and when x4 gets changed (<code>x4[0] = 88</code>), so does xs (aka "orig")
+</p>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-5-2" class="outline-3">
+<h3 id="sec-5-2"><span class="section-number-3">5.2</span> Constructor overview</h3>
+<div class="outline-text-3" id="text-5-2">
+
+
+<p>
+SEXP x;
+NumericVector y( x ); // from a SEXP
+</p>
+<p>
+// cloning (deep copy)
+NumericVector z = clone&lt;NumericVector&gt;( y );
+</p>
+<p>
+// of a given size (all elements set to 0.0)
+NumericVector y( 10 );
+</p>
+<p>
+// &hellip; specifying the value
+NumericVector y( 10, 2.0 );
+</p>
+<p>
+// &hellip; with elements generated
+NumericVector y( 10, ::Rf<sub>unif</sub><sub>rand</sub> );
+</p>
+<p>
+// with given elements
+NumericVector y = NumericVector::create( 1.0, 2.0 );
+</p>
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-6" class="outline-2">
+<h2 id="sec-6"><span class="section-number-2">6</span> Matrices</h2>
+<div class="outline-text-2" id="text-6">
+
+
+<p>
+Matrices are vectors with a dimension attribute.
+</p>
+
+</div>
+
+<div id="outline-container-6-1" class="outline-3">
+<h3 id="sec-6-1"><span class="section-number-3">6.1</span> Simple matrix example</h3>
+<div class="outline-text-3" id="text-6-1">
+
+
+<p>
+Note the use of an "apply-like" C++ function here.
+</p>
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">  Rcpp::NumericMatrix mat = Rcpp::NumericMatrix(mx);</span>
+<span style="color: #ffa07a;">  std::transform(mat.begin(), mat.end(),</span>
+<span style="color: #ffa07a;">                 mat.begin(), ::sqrt);</span>
+<span style="color: #ffa07a;">  return mat; '</span>
+fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(mx=<span style="color: #ffa07a;">"numeric"</span>), src,
+                   plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+mat <span style="color: #7fffd4;">&lt;-</span> matrix(c(1, 4, 9, 16, 25, 36, 49, 64, 81), 3, 3)
+fun(mat)
+
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-6-2" class="outline-3">
+<h3 id="sec-6-2"><span class="section-number-3">6.2</span> RcppArmadillo</h3>
+<div class="outline-text-3" id="text-6-2">
+
+
+<p>
+"Armadillo" is an open-source linear-algebra library for C++:
+</p>
+<p>
+    <a href="http://arma.sourceforge.net/">http://arma.sourceforge.net/</a>
+</p>
+<p>
+The RcppArmadillo package makes it easy to use Armadillo in Rcpp.
+</p>
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">  arma::mat m1 = Rcpp::as&lt;arma::mat&gt;(mx);</span>
+<span style="color: #ffa07a;">  arma::mat m2 = m1 + m1;</span>
+<span style="color: #ffa07a;">  arma::mat m3 = m1 * 3;</span>
+<span style="color: #ffa07a;">  return Rcpp::List::create(m1, m2, m3); '</span>
+fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(mx=<span style="color: #ffa07a;">"numeric"</span>), src,
+                   plugin=<span style="color: #ffa07a;">"RcppArmadillo"</span>)
+mat <span style="color: #7fffd4;">&lt;-</span> matrix(1:9, 3, 3)
+mat2 <span style="color: #7fffd4;">&lt;-</span> fun(mat)
+print(mat2)
+
+</pre>
+
+
+
+<p>
+Note, by the way, that some people prefer the "Eigen" package for this
+kind of thing:
+</p>
+
+
+
+<pre class="example">
+                Information on package ‘RcppEigen’
+
+Description:
+
+Package:            RcppEigen
+Type:               Package
+Title:              Rcpp integration for the Eigen templated linear
+                    algebra library.
+
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-6-3" class="outline-3">
+<h3 id="sec-6-3"><span class="section-number-3">6.3</span> More fun with Armadillo: eigenvalues</h3>
+<div class="outline-text-3" id="text-6-3">
+
+
+
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">  arma::mat m1 = Rcpp::as&lt;arma::mat&gt;(mx);</span>
+<span style="color: #ffa07a;">  arma::vec eigval;</span>
+<span style="color: #ffa07a;">  arma::mat eigvec;</span>
+
+<span style="color: #ffa07a;">  eig_sym(eigval, eigvec, m1);</span>
+
+<span style="color: #ffa07a;">  return Rcpp::List::create(m1, eigval, eigvec); '</span>
+fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(mx=<span style="color: #ffa07a;">"numeric"</span>), src,
+                   plugin=<span style="color: #ffa07a;">"RcppArmadillo"</span>)
+
+
+mat <span style="color: #7fffd4;">&lt;-</span> matrix (rbind(c(3, 2, 4),
+                     c(2, 0, 2),
+                     c(4, 2, 3)), nrow=3, ncol=3)
+
+print(fun(mat))
+
+
+</pre>
+
+
+
+<pre class="example">[[1]]
+     [,1] [,2] [,3]
+[1,]    3    2    4
+[2,]    2    0    2
+[3,]    4    2    3
+
+[[2]]
+     [,1]
+[1,]   -1
+[2,]   -1
+[3,]    8
+
+[[3]]
+           [,1]       [,2]      [,3]
+[1,] -0.4941014 -0.5580496 0.6666667
+[2,] -0.4720189  0.8161415 0.3333333
+[3,]  0.7301109  0.1499788 0.6666667
+</pre>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-7" class="outline-2">
+<h2 id="sec-7"><span class="section-number-2">7</span> Many other data types in Rcpp</h2>
+<div class="outline-text-2" id="text-7">
+
+
+
+</div>
+
+<div id="outline-container-7-1" class="outline-3">
+<h3 id="sec-7-1"><span class="section-number-3">7.1</span> GenericVector (List)</h3>
+<div class="outline-text-3" id="text-7-1">
+
+
+<p>
+We had an example above, in the discussion of eigenvalues.
+</p>
+
+</div>
+
+</div>
+
+<div id="outline-container-7-2" class="outline-3">
+<h3 id="sec-7-2"><span class="section-number-3">7.2</span> DataFrame</h3>
+<div class="outline-text-3" id="text-7-2">
+
+
+<p>
+We had an example above in the discussion of cloning.
+</p>
+
+</div>
+
+</div>
+
+<div id="outline-container-7-3" class="outline-3">
+<h3 id="sec-7-3"><span class="section-number-3">7.3</span> Function</h3>
+<div class="outline-text-3" id="text-7-3">
+
+
+
+</div>
+
+<div id="outline-container-7-3-1" class="outline-4">
+<h4 id="sec-7-3-1"><span class="section-number-4">7.3.1</span> Example: grabbing a function from R</h4>
+<div class="outline-text-4" id="text-7-3-1">
+
+
+<p>
+This example merely illustrates the use of Rcpp to link to a function
+in R.  All we do is grab the function, apply it to some vectors
+created in C++, and then return the output of the function to R.  We
+would have gotten the same result had we defined the vectors in R and
+invoked the same function directly in R.
+</p>
+<p>
+But in a real use case, we would have proceede to do further
+calculations inside the C+ code.
+</p>
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">  Rcpp::Function expGrid("expand.grid");</span>
+<span style="color: #ffa07a;">  IntegerVector v1;</span>
+<span style="color: #ffa07a;">  IntegerVector v2;</span>
+
+<span style="color: #ffa07a;">  v1.push_back(1);</span>
+<span style="color: #ffa07a;">  v1.push_back(3);</span>
+<span style="color: #ffa07a;">  v1.push_back(5);</span>
+
+<span style="color: #ffa07a;">  v2.push_back(2);</span>
+<span style="color: #ffa07a;">  v2.push_back(4);</span>
+<span style="color: #ffa07a;">  v2.push_back(6);</span>
+
+<span style="color: #ffa07a;">  return(expGrid(v1, v2));'</span>
+
+  fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(),
+                     src,
+                     plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+  print(fun())
+
+
+
+</pre>
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-7-3-2" class="outline-4">
+<h4 id="sec-7-3-2"><span class="section-number-4">7.3.2</span> Example: passing functions from R to C++</h4>
+<div class="outline-text-4" id="text-7-3-2">
+
+
+<p>
+Note the third invocation of "fun".  In the C++ code the function is
+named "sort", but that name is, in effect, a dummy variable.
+</p>
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">  Function sort(x) ;</span>
+<span style="color: #ffa07a;">  return sort( y, Named("decreasing", true));'</span>
+fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(x=<span style="color: #ffa07a;">"function"</span>,
+                             y=<span style="color: #ffa07a;">"ANY"</span>),
+                    src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>, verbose=<span style="color: #98fb98;">FALSE</span>)
+fun(sort, sample(1:5, 10, <span style="color: #98fb98;">TRUE</span>))
+fun(sort, sample(LETTERS[1:5], 10, <span style="color: #98fb98;">TRUE</span>))
+fun(mean, sample(1:100, 10, <span style="color: #98fb98;">TRUE</span>))
+
+
+</pre>
+
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-7-4" class="outline-3">
+<h3 id="sec-7-4"><span class="section-number-3">7.4</span> Environment</h3>
+<div class="outline-text-3" id="text-7-4">
+
+
+<p>
+The Environment class allows us to access R environments.  It provides
+an alternative way of accessing functions from R.
+</p>
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">    Rcpp::Environment stats("package:stats");</span>
+<span style="color: #ffa07a;">    Rcpp::Function rnorm = stats["rnorm"];</span>
+<span style="color: #ffa07a;">    return rnorm(10, Rcpp::Named("sd", 100.0));</span>
+<span style="color: #ffa07a;">'</span>
+
+fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(),
+                   src, plugin=<span style="color: #ffa07a;">"Rcpp"</span>)
+fun()
+
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-7-5" class="outline-3">
+<h3 id="sec-7-5"><span class="section-number-3">7.5</span> S4 classes</h3>
+<div class="outline-text-3" id="text-7-5">
+
+
+<p>
+S4 classes can also be created or altered at the C++ level.  Example
+omitted.
+</p>
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-8" class="outline-2">
+<h2 id="sec-8"><span class="section-number-2">8</span> Creating a package with Rcpp</h2>
+<div class="outline-text-2" id="text-8">
+
+
+<p>
+R provides a function, <code>package.skeleton()</code>, to help create R
+packages.
+</p>
+<p>
+Eddelbuettel/Francois have wrapped and extended this function to
+<code>Rcpp.package.skeleton()</code> to help create R packages that involve Rcpp.
+</p>
+
+</div>
+
+<div id="outline-container-8-1" class="outline-3">
+<h3 id="sec-8-1"><span class="section-number-3">8.1</span> Making the skeleton</h3>
+<div class="outline-text-3" id="text-8-1">
+
+
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(Rcpp)
+<span style="color: #00ffff;">if</span> (!file.exists(<span style="color: #ffa07a;">"./UCDpackage"</span>)) {
+    Rcpp.package.skeleton( <span style="color: #ffa07a;">"UCDpackage"</span> )
+}
+
+</pre>
+
+
+
+<pre class="example"> Creating directories ...
+Creating DESCRIPTION ...
+Creating NAMESPACE ...
+Creating Read-and-delete-me ...
+Saving functions and data ...
+Making help files ...
+Done.
+Further steps are described in './UCDpackage/Read-and-delete-me'.
+
+Adding Rcpp settings
+ &gt;&gt; added Depends: Rcpp
+ &gt;&gt; added LinkingTo: Rcpp
+ &gt;&gt; added useDynLib directive to NAMESPACE
+ &gt;&gt; added Makevars file with Rcpp settings
+ &gt;&gt; added Makevars.win file with Rcpp settings
+ &gt;&gt; added example header file using Rcpp classes
+ &gt;&gt; added example src file using Rcpp classes
+ &gt;&gt; added example R file calling the C++ example
+ &gt;&gt; added Rd file for rcpp_hello_world
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-2" class="outline-3">
+<h3 id="sec-8-2"><span class="section-number-3">8.2</span> A look at the file structure of the skeleton package</h3>
+<div class="outline-text-3" id="text-8-2">
+
+
+
+
+
+<pre class="src src-sh">tree UCDpackage
+
+</pre>
+
+
+
+<pre class="example">UCDpackage
+├── DESCRIPTION
+├── man
+│   ├── rcpp_hello_world.Rd
+│   └── UCDpackage-package.Rd
+├── NAMESPACE
+├── R
+│   └── rcpp_hello_world.R
+├── Read-and-delete-me
+└── src
+    ├── Makevars
+    ├── Makevars.win
+    ├── rcpp_hello_world.cpp
+    ├── rcpp_hello_world.h
+    ├── rcpp_hello_world.o
+    └── UCDpackage.so
+
+3 directories, 12 files
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-3" class="outline-3">
+<h3 id="sec-8-3"><span class="section-number-3">8.3</span> The C++ header file</h3>
+<div class="outline-text-3" id="text-8-3">
+
+
+
+
+
+<pre class="src src-sh">cat ./UCDpackage/src/rcpp_hello_world.h
+
+</pre>
+
+
+
+<pre class="example">#ifndef _UCDpackage_RCPP_HELLO_WORLD_H
+#define _UCDpackage_RCPP_HELLO_WORLD_H
+
+#include &lt;Rcpp.h&gt;
+
+/*
+ * note : RcppExport is an alias to `extern "C"` defined by Rcpp.
+ *
+ * It gives C calling convention to the rcpp_hello_world function so that 
+ * it can be called from .Call in R. Otherwise, the C++ compiler mangles the 
+ * name of the function and .Call can't find it.
+ *
+ * It is only useful to use RcppExport when the function is intended to be called
+ * by .Call. See the thread http://thread.gmane.org/gmane.comp.lang.r.rcpp/649/focus=672
+ * on Rcpp-devel for a misuse of RcppExport
+ */
+RcppExport SEXP rcpp_hello_world() ;
+
+#endif
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-4" class="outline-3">
+<h3 id="sec-8-4"><span class="section-number-3">8.4</span> The C++ source file</h3>
+<div class="outline-text-3" id="text-8-4">
+
+
+
+
+
+<pre class="src src-sh">cat ./UCDpackage/src/rcpp_hello_world.cpp
+
+</pre>
+
+
+
+<pre class="example">#include "rcpp_hello_world.h"
+
+SEXP rcpp_hello_world(){
+    using namespace Rcpp ;
+    
+    CharacterVector x = CharacterVector::create( "foo", "bar" )  ;
+    NumericVector y   = NumericVector::create( 0.0, 1.0 ) ;
+    List z            = List::create( x, y ) ;
+    
+    return z ;
+}
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-5" class="outline-3">
+<h3 id="sec-8-5"><span class="section-number-3">8.5</span> The R file</h3>
+<div class="outline-text-3" id="text-8-5">
+
+
+
+
+
+<pre class="src src-sh">cat ./UCDpackage/R/rcpp_hello_world.R
+
+</pre>
+
+
+<pre class="example">
+
+rcpp_hello_world &lt;- function(){
+	.Call( "rcpp_hello_world", PACKAGE = "UCDpackage" )
+}
+
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-6" class="outline-3">
+<h3 id="sec-8-6"><span class="section-number-3">8.6</span> The DESCRIPTION file</h3>
+<div class="outline-text-3" id="text-8-6">
+
+
+<p>
+Note the last two lines, which declare the dependency of your package
+on Rcpp.
+</p>
+
+
+
+<pre class="src src-sh">cat ./UCDpackage/DESCRIPTION
+
+</pre>
+
+
+
+<pre class="example">Package: UCDpackage
+Type: Package
+Title: What the package does (short line)
+Version: 1.0
+Date: 2012-06-04
+Author: Who wrote it
+Maintainer: Who to complain to &lt;yourfault@somewhere.net&gt;
+Description: More about what it does (maybe more than one line)
+License: What Licence is it under ?
+Depends: Rcpp (&gt;= 0.9.10)
+LinkingTo: Rcpp
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-7" class="outline-3">
+<h3 id="sec-8-7"><span class="section-number-3">8.7</span> The NAMESPACE file</h3>
+<div class="outline-text-3" id="text-8-7">
+
+
+<p>
+The regular expression exports all symbols.
+</p>
+
+
+
+<pre class="src src-sh">cat ./UCDpackage/NAMESPACE
+
+</pre>
+
+
+<pre class="example">
+useDynLib(UCDpackage)
+exportPattern("^[[:alpha:]]+")
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-8" class="outline-3">
+<h3 id="sec-8-8"><span class="section-number-3">8.8</span> The standard Makevars file</h3>
+<div class="outline-text-3" id="text-8-8">
+
+
+
+
+
+<pre class="src src-sh">cat ./UCDpackage/src/Makevars
+
+</pre>
+
+
+
+<pre class="example">## Use the R_HOME indirection to support installations of multiple R version
+PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"`
+
+## As an alternative, one can also add this code in a file 'configure'
+##
+##    PKG_LIBS=`${R_HOME}/bin/Rscript -e "Rcpp:::LdFlags()"`
+## 
+##    sed -e "s|@PKG_LIBS@|${PKG_LIBS}|" \
+##        src/Makevars.in &gt; src/Makevars
+## 
+## which together with the following file 'src/Makevars.in'
+##
+##    PKG_LIBS = @PKG_LIBS@
+##
+## can be used to create src/Makevars dynamically. This scheme is more
+## powerful and can be expanded to also check for and link with other
+## libraries.  It should be complemented by a file 'cleanup'
+##
+##    rm src/Makevars
+##
+## which removes the autogenerated file src/Makevars. 
+##
+## Of course, autoconf can also be used to write configure files. This is
+## done by a number of packages, but recommended only for more advanced users
+## comfortable with autoconf and its related tools.
+
+
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-9" class="outline-3">
+<h3 id="sec-8-9"><span class="section-number-3">8.9</span> The Windows Makevars.win file</h3>
+<div class="outline-text-3" id="text-8-9">
+
+
+
+
+
+<pre class="src src-sh">cat ./UCDpackage/src/Makevars.win
+
+</pre>
+
+
+<pre class="example">
+
+## Use the R_HOME indirection to support installations of multiple R version
+PKG_LIBS = $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "Rcpp:::LdFlags()")
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-10" class="outline-3">
+<h3 id="sec-8-10"><span class="section-number-3">8.10</span> Installation</h3>
+<div class="outline-text-3" id="text-8-10">
+
+
+<p>
+Something in my .Rprofile was causing a problem.
+</p>
+
+
+
+<pre class="src src-sh">mv ~/.Rprofile ~/.Rprofile.save
+R CMD INSTALL -l ~/R/library UCDpackage
+mv ~/.Rprofile.save ~/.Rprofile  
+
+</pre>
+
+
+<pre class="example">
+make: Nothing to be done for `all'.
+  converting help for package ‘UCDpackage’
+    UCDpackage-package                      html  
+    rcpp_hello_world                        html  
+</pre>
+
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-8-11" class="outline-3">
+<h3 id="sec-8-11"><span class="section-number-3">8.11</span> Use of the package</h3>
+<div class="outline-text-3" id="text-8-11">
+
+
+
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(<span style="color: #ffa07a;">"UCDpackage"</span>, lib.loc=<span style="color: #ffa07a;">"~/R/library"</span>)
+rcpp_hello_world()
+
+</pre>
+
+
+<pre class="example">
+[[1]]
+[1] "foo" "bar"
+
+[[2]]
+[1] 0 1
+</pre>
+
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-9" class="outline-2">
+<h2 id="sec-9"><span class="section-number-2">9</span> Syntactic sugar</h2>
+<div class="outline-text-2" id="text-9">
+
+
+<blockquote>
+
+
+<p>
+Put succinctly, the motivation of Rcpp sugar is to bring a subset of
+the high-level R syntax in C++.
+</p>
+<p>
+&ndash; Dirk Eddelbuettel and Romain Francois
+</p>
+
+</blockquote>
+
+
+<p>
+See the PDF document in the vignette:
+</p>
+
+
+
+<pre class="example">
+&gt; vignette("Rcpp-sugar")
+
+</pre>
+
+
+
+</div>
+
+<div id="outline-container-9-1" class="outline-3">
+<h3 id="sec-9-1"><span class="section-number-3">9.1</span> A first sugar example: sapply</h3>
+<div class="outline-text-3" id="text-9-1">
+
+
+<p>
+To use an auxiliary function with the simple "inline" approach, the
+function, AFAICT, has to be defined in an include file.
+</p>
+<p>
+But, given the function, the syntax for sapply in C++  is now virtually
+identical to the syntax used in R.  (The "wrap" function is a part of
+Rcpp that transforms an arbitrary object into a symbolic expression,
+aka, SEXP &ndash; i.e. something that R can understand.)
+</p>
+
+
+
+<pre class="src src-R"><span style="color: #7fffd4;">library</span>(inline)
+includes <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'</span>
+<span style="color: #ffa07a;">        double square( double x){</span>
+<span style="color: #ffa07a;">          return x*x ;</span>
+<span style="color: #ffa07a;">        }'</span>
+
+src <span style="color: #7fffd4;">&lt;-</span> <span style="color: #ffa07a;">'NumericVector x(xx);</span>
+<span style="color: #ffa07a;">        return wrap(sapply( x, square ));'</span>
+
+fun <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(xx=<span style="color: #ffa07a;">"numeric"</span>),
+                   body=src,
+                   plugin=<span style="color: #ffa07a;">"Rcpp"</span>,
+                   includes=includes)
+
+fun(c(1, 3, 5, 7, 9))
+
+</pre>
+
+
+<pre class="example">
+[1]  1  9 25 49 81
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-9-2" class="outline-3">
+<h3 id="sec-9-2"><span class="section-number-3">9.2</span> Sugar example with benchmark</h3>
+<div class="outline-text-3" id="text-9-2">
+
+
+<p>
+Note that the C++ syntax is very "R-like", but that there is a
+significant performance advantage to using Rcpp/C++.
+</p>
+
+
+
+<pre class="src src-R"><span style="color: #87cefa;">foo</span> <span style="color: #7fffd4;">&lt;-</span> <span style="color: #00ffff;">function</span>(x) {
+
+    <span style="color: #ffa500;">## </span><span style="color: #ffa500;">sum of</span>
+    <span style="color: #ffa500;">##  </span><span style="color: #ffa500;">-- squares of negatives</span>
+    <span style="color: #ffa500;">##  </span><span style="color: #ffa500;">-- exponentials of positives</span>
+    s <span style="color: #7fffd4;">&lt;-</span> sum(ifelse( x &lt; 0,  x*x,  exp(x) ))
+
+    <span style="color: #00ffff;">return</span>(s)
+}
+
+
+<span style="color: #7fffd4;">library</span>(inline)
+
+cppfoo <span style="color: #7fffd4;">&lt;-</span> cxxfunction(signature(xs=<span style="color: #ffa07a;">"numeric"</span>),
+                   plugin=<span style="color: #ffa07a;">"Rcpp"</span>, body=<span style="color: #ffa07a;">'</span>
+
+<span style="color: #ffa07a;">   NumericVector x(xs);</span>
+
+<span style="color: #ffa07a;">   double s = sum( ifelse( x &lt; 0, x*x, exp(x) ));</span>
+
+<span style="color: #ffa07a;">   return wrap(s);</span>
+<span style="color: #ffa07a;">'</span>)
+
+<span style="color: #7fffd4;">library</span>(compiler)
+Rcmpfoo <span style="color: #7fffd4;">&lt;-</span> cmpfun(foo)
+
+<span style="color: #7fffd4;">library</span>(rbenchmark)
+x <span style="color: #7fffd4;">&lt;-</span> rnorm(1e5)
+benchmark(foo(x), Rcmpfoo(x), cppfoo(x),
+          columns=c(<span style="color: #ffa07a;">"test"</span>, <span style="color: #ffa07a;">"elapsed"</span>, <span style="color: #ffa07a;">"relative"</span>, <span style="color: #ffa07a;">"user.self"</span>, <span style="color: #ffa07a;">"sys.self"</span>),
+          order=<span style="color: #ffa07a;">"relative"</span>, replications=10)
+
+
+</pre>
+
+
+<pre class="example">
+        test elapsed relative user.self sys.self
+3  cppfoo(x)   0.035  1.00000     0.036        0
+2 Rcmpfoo(x)   0.980 28.00000     0.959        0
+1     foo(x)   1.110 31.71429     1.104        0
+</pre>
+
+
+
+</div>
+</div>
+</div>
+</div>
+
+<div id="postamble">
+<p class="date">Date: 2012-06-04T16:33-0700</p>
+<p class="author">Author: Michael Hannon</p>
+<p class="creator">Org version 7.8.09 with Emacs version 23</p>
+<a href="http://validator.w3.org/check?uri=referer">Validate XHTML 1.0</a>
+
+</div>
+</body>
+</html>
